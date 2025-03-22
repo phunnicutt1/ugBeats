@@ -10,6 +10,8 @@
 #include <JuceHeader.h>
 #include <string>
 #include <memory>
+#include "ParameterAutomation.h"
+#include <map>
 
 namespace UndergroundBeats {
 
@@ -26,14 +28,11 @@ public:
     Effect(const std::string& name);
     virtual ~Effect();
 
-    /**
-     * @brief Parameter automation handler class
-     */
     class Parameter {
     public:
         Parameter(const std::string& name, float defaultValue, float minValue, float maxValue)
             : name(name), value(defaultValue), defaultValue(defaultValue)
-            , minValue(minValue), maxValue(maxValue), automation(nullptr) {}
+            , minValue(minValue), maxValue(maxValue) {}
         
         void setValue(float newValue) {
             value = juce::jlimit(minValue, maxValue, newValue);
@@ -47,10 +46,28 @@ public:
         
         void setAutomation(std::unique_ptr<ParameterAutomation> newAutomation) {
             automation = std::move(newAutomation);
+            if (automation) {
+                automation->addPoint(0.0, value); // Initialize with current value
+            }
         }
         
         ParameterAutomation* getAutomation() const { return automation.get(); }
         
+        void updateFromAutomation(double time) {
+            if (automation) {
+                setValue(automation->getValueAtTime(time));
+            }
+        }
+        
+    private:
+        std::string name;
+        float value;
+        float defaultValue;
+        float minValue;
+        float maxValue;
+        std::unique_ptr<ParameterAutomation> automation;
+    };
+
 protected:
     /**
      * @brief Get a parameter's current value
@@ -68,15 +85,6 @@ protected:
 
     // Storage for effect parameters
     std::map<std::string, std::unique_ptr<Parameter>> parameters;
-
-    private:
-        std::string name;
-        float value;
-        float defaultValue;
-        float minValue;
-        float maxValue;
-        std::unique_ptr<ParameterAutomation> automation;
-    };
     
     /**
      * @brief Get the effect name

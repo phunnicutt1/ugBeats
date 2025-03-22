@@ -52,6 +52,19 @@ SequencerView::SequencerView(std::shared_ptr<UndergroundBeats::Sequencer> seq)
     patternGrid = std::make_unique<PatternGridComponent>();
     addAndMakeVisible(*patternGrid);
     
+    addAndMakeVisible(patternSelector);
+    patternSelector.onChange = [this]() {
+        int selectedTrack = trackList->getSelectedTrackIndex();
+        if (selectedTrack >= 0) {
+            if (auto track = trackList->getTrack(selectedTrack)) {
+                int patternIndex = patternSelector.getSelectedItemIndex();
+                if (patternIndex >= 0 && patternIndex < static_cast<int>(track->getPatternCount())) {
+                    patternGrid->setPattern(track->getPattern(patternIndex));
+                }
+            }
+        }
+    };
+    
     addAndMakeVisible(newPatternButton);
     newPatternButton.onClick = [this]() {
         // TODO: Create new pattern through sequencer
@@ -69,11 +82,78 @@ SequencerView::SequencerView(std::shared_ptr<UndergroundBeats::Sequencer> seq)
         patternGrid->setSnapToGrid(snapToGridButton.getToggleState());
     };
     
-    // Initialize track list and controls
-    addAndMakeVisible(trackList);
+    // Initialize track management
+    trackList = std::make_unique<TrackListComponent>();
+    addAndMakeVisible(*trackList);
+    
     addAndMakeVisible(addTrackButton);
     addTrackButton.onClick = [this]() {
-        // TODO: Add new track through sequencer
+        auto track = std::make_shared<UndergroundBeats::Track>("Track " + 
+            juce::String(trackList->getTrackCount() + 1));
+        trackList->addTrack(track);
+        // TODO: Add track to sequencer engine
+    };
+    
+    addAndMakeVisible(deleteTrackButton);
+    deleteTrackButton.onClick = [this]() {
+        int selectedTrack = trackList->getSelectedTrackIndex();
+        if (selectedTrack >= 0) {
+            trackList->removeTrack(selectedTrack);
+            // TODO: Remove track from sequencer engine
+        }
+    };
+    
+    trackList->onTrackSelected = [this](int index) {
+        if (auto track = trackList->getTrack(index)) {
+            updatePatternList();
+            // If track has any patterns, show the first one
+            if (track->getPatternCount() > 0) {
+                patternSelector.setSelectedItemIndex(0, juce::sendNotification);
+            } else {
+                // Create a default pattern for new tracks
+                auto pattern = std::make_shared<UndergroundBeats::Pattern>(
+                    "Pattern 1", 4.0); // 4 beats default length
+                track->addPattern(pattern);
+                updatePatternList();
+                patternSelector.setSelectedItemIndex(0, juce::sendNotification);
+            }
+        }
+    };
+    
+    // Connect pattern creation to selected track
+    newPatternButton.onClick = [this]() {
+        int selectedTrack = trackList->getSelectedTrackIndex();
+        if (selectedTrack >= 0) {
+            if (auto track = trackList->getTrack(selectedTrack)) {
+                auto pattern = std::make_shared<UndergroundBeats::Pattern>(
+                    "Pattern " + juce::String(track->getPatternCount() + 1));
+                track->addPattern(pattern);
+                updatePatternList();
+                patternSelector.setSelectedItemIndex(track->getPatternCount() - 1, juce::sendNotification);
+            }
+        }
+    };
+    
+    // Connect pattern deletion to selected track
+    deletePatternButton.onClick = [this]() {
+        int selectedTrack = trackList->getSelectedTrackIndex();
+        if (selectedTrack >= 0) {
+            if (auto track = trackList->getTrack(selectedTrack)) {
+                int selectedPattern = patternSelector.getSelectedItemIndex();
+                if (selectedPattern >= 0 && selectedPattern < static_cast<int>(track->getPatternCount())) {
+                    track->removePattern(selectedPattern);
+                    updatePatternList();
+                    
+                    if (track->getPatternCount() > 0) {
+                        // Select the previous pattern, or the first if we deleted the first
+                        int newSelection = selectedPattern > 0 ? selectedPattern - 1 : 0;
+                        patternSelector.setSelectedItemIndex(newSelection, juce::sendNotification);
+                    } else {
+                        patternGrid->setPattern(nullptr);
+                    }
+                }
+            }
+        }
     };
     
     // Start UI update timer
@@ -114,6 +194,22 @@ void SequencerView::updateTempoDisplay()
     }
 }
 
+void SequencerView::updatePatternList()
+{
+    patternSelector.clear();
+    
+    int selectedTrack = trackList->getSelectedTrackIndex();
+    if (selectedTrack >= 0) {
+        if (auto track = trackList->getTrack(selectedTrack)) {
+            for (size_t i = 0; i < track->getPatternCount(); ++i) {
+                if (auto pattern = track->getPattern(i)) {
+                    patternSelector.addItem(pattern->getName(), i + 1);
+                }
+            }
+        }
+    }
+}
+
 void SequencerView::resized()
 {
     auto area = getLocalBounds();
@@ -133,17 +229,26 @@ void SequencerView::resized()
     // Layout pattern controls
     auto controlsHeight = 30;
     auto controlsArea = area.removeFromTop(controlsHeight);
+    patternSelector.setBounds(controlsArea.removeFromLeft(150));
+    controlsArea.removeFromLeft(10); // spacing
     newPatternButton.setBounds(controlsArea.removeFromLeft(100));
     controlsArea.removeFromLeft(10); // spacing
     deletePatternButton.setBounds(controlsArea.removeFromLeft(100));
     controlsArea.removeFromLeft(10); // spacing
     snapToGridButton.setBounds(controlsArea.removeFromLeft(100));
     
-    // Layout track list and controls
-    auto trackListWidth = 150;
+    // Layout track management
+    auto trackListWidth = 250; // Increased width for controls
     auto trackListArea = area.removeFromLeft(trackListWidth);
-    trackList.setBounds(trackListArea.removeFromTop(area.getHeight() - controlsHeight));
-    addTrackButton.setBounds(trackListArea);
+    
+    // Track control buttons at bottom
+    auto buttonHeight = 30;
+    auto buttonArea = trackListArea.removeFromBottom(buttonHeight);
+    addTrackButton.setBounds(buttonArea.removeFromLeft(buttonArea.getWidth() / 2));
+    deleteTrackButton.setBounds(buttonArea);
+    
+    // Track list fills remaining space
+    trackList->setBounds(trackListArea);
     
     // Pattern grid takes remaining space
     patternGrid->setBounds(area);

@@ -33,13 +33,20 @@ private:
     
     // Pattern editing
     std::unique_ptr<PatternGridComponent> patternGrid;
+    juce::ComboBox patternSelector;
     juce::TextButton newPatternButton { "New Pattern" };
     juce::TextButton deletePatternButton { "Delete Pattern" };
     juce::ToggleButton snapToGridButton { "Snap to Grid" };
     
-    // Track headers
-    juce::ListBox trackList;
+    void updatePatternList();
+    
+    // Track management
+    std::unique_ptr<TrackListComponent> trackList;
     juce::TextButton addTrackButton { "Add Track" };
+    juce::TextButton deleteTrackButton { "Delete Track" };
+    
+    // Sequencer engine reference
+    std::shared_ptr<UndergroundBeats::Sequencer> sequencer;
     
     // UI update interval in milliseconds
     static constexpr int UPDATE_INTERVAL_MS = 50;

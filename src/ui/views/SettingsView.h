@@ -19,7 +19,16 @@ private:
     void updateBufferSizeList();
     void updateMIDIDeviceLists();
     
+    int findSampleRateId(double sampleRate) const;
+    int findBufferSizeId(int bufferSize) const;
+    double getSampleRateForId(int id) const;
+    int getBufferSizeForId(int id) const;
+    
     std::shared_ptr<UndergroundBeats::AudioDeviceManager> audioDeviceManager;
+    
+    // Cache available options
+    std::vector<double> availableSampleRates;
+    std::vector<int> availableBufferSizes;
     
     struct SettingsGroup : public juce::GroupComponent
     {

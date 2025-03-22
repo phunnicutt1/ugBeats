@@ -52,6 +52,112 @@ MixerView::~MixerView()
 void MixerView::setAudioEngine(Engine* engine)
 {
     audioEngine = engine;
+    if (audioEngine) {
+        processorGraph = audioEngine->getProcessorGraph();
+        initializeProcessorGraph();
+    }
+}
+
+void MixerView::initializeProcessorGraph()
+{
+    if (!processorGraph)
+        return;
+        
+    // Create master channel processor
+    createMasterChannel();
+    
+    // Create processors for existing channels
+    for (size_t i = 0; i < inputChannels.size(); ++i) {
+        createChannelProcessor(i);
+        connectChannelToMaster(i);
+    }
+}
+
+void MixerView::createMasterChannel()
+{
+    // Create master gain processor
+    auto masterProcessor = std::make_unique<juce::AudioProcessorGraph::AudioGraphIOProcessor>(
+        juce::AudioProcessorGraph::AudioGraphIOProcessor::audioOutputNode);
+        
+    // Add to graph
+    masterNodeId = processorGraph->addProcessor(std::move(masterProcessor), "master");
+}
+
+void MixerView::createChannelProcessor(int channelIndex)
+{
+    if (!processorGraph)
+        return;
+        
+    // Create channel gain processor
+    auto gainProcessor = std::make_unique<juce::GainProcessor>();
+    auto nodeId = processorGraph->addProcessor(std::move(gainProcessor), 
+        "channel_" + std::to_string(channelIndex));
+        
+    // Store processor info
+    channelProcessors[channelIndex] = ChannelProcessor{ nodeId, nullptr };
+}
+
+void MixerView::removeChannelProcessor(int channelIndex)
+{
+    if (!processorGraph)
+        return;
+        
+    auto it = channelProcessors.find(channelIndex);
+    if (it != channelProcessors.end()) {
+        disconnectChannelFromMaster(channelIndex);
+        processorGraph->removeProcessor(it->second.nodeId);
+        channelProcessors.erase(it);
+    }
+}
+
+void MixerView::connectChannelToMaster(int channelIndex)
+{
+    if (!processorGraph)
+        return;
+        
+    auto it = channelProcessors.find(channelIndex);
+    if (it != channelProcessors.end()) {
+        // Connect both left and right channels
+        processorGraph->connectNodes(it->second.nodeId, 0, masterNodeId, 0);
+        processorGraph->connectNodes(it->second.nodeId, 1, masterNodeId, 1);
+    }
+}
+
+void MixerView::disconnectChannelFromMaster(int channelIndex)
+{
+    if (!processorGraph)
+        return;
+        
+    auto it = channelProcessors.find(channelIndex);
+    if (it != channelProcessors.end()) {
+        processorGraph->disconnectNodes(it->second.nodeId, masterNodeId);
+    }
+}
+
+void MixerView::updateChannelRouting()
+{
+    if (!processorGraph)
+        return;
+        
+    // Ensure all channels are properly connected
+    for (size_t i = 0; i < inputChannels.size(); ++i) {
+        if (channelProcessors.find(i) == channelProcessors.end()) {
+            createChannelProcessor(i);
+        }
+        connectChannelToMaster(i);
+    }
+    
+    // Remove any orphaned processors
+    std::vector<int> channelsToRemove;
+    for (const auto& pair : channelProcessors) {
+        if (pair.first >= static_cast<int>(inputChannels.size())) {
+            channelsToRemove.push_back(pair.first);
+        }
+    }
+    
+    for (int index : channelsToRemove) {
+        removeChannelProcessor(index);
+    }
 }
 
 void MixerView::setNumInputChannels(int numChannels)
@@ -94,16 +200,27 @@ void MixerView::setNumInputChannels(int numChannels)
         
         channelsContainer.addAndMakeVisible(channel.get());
         inputChannels.push_back(std::move(channel));
+        
+        // Create and connect processor for new channel
+        if (processorGraph) {
+            createChannelProcessor(inputChannels.size() - 1);
+            connectChannelToMaster(inputChannels.size() - 1);
+        }
     }
     
     // Remove excess channels
     while (inputChannels.size() > static_cast<size_t>(numChannels))
     {
+        int channelIndex = inputChannels.size() - 1;
+        if (processorGraph) {
+            removeChannelProcessor(channelIndex);
+        }
         inputChannels.pop_back();
     }
     
-    // Update the layout
+    // Update the layout and routing
     updateChannelLayout();
+    updateChannelRouting();
 }
 
 void MixerView::setNumEffectSends(int numSends)

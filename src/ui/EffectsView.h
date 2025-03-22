@@ -36,6 +36,27 @@ public:
     //==============================================================================
     void timerCallback() override;
 
+    //==============================================================================
+    /**
+     * @brief Draw effect chain connections
+     */
+    void drawConnections(juce::Graphics& g);
+    
+    /**
+     * @brief Calculate connection path between components
+     */
+    juce::Path calculateConnectionPath(juce::Component* source, juce::Component* dest) const;
+    
+    /**
+     * @brief Update connection paths for all effects
+     */
+    void updateConnectionPaths();
+    
+    /**
+     * @brief Get the list of connected components in processing order
+     */
+    std::vector<std::pair<int, juce::Component*>> getOrderedComponents() const;
+
 private:
     /**
      * @brief Create UI for an effect node

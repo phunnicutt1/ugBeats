@@ -10,10 +10,17 @@
 #include <JuceHeader.h>
 #include "../components/MixerChannel.h"
 #include "../../audio-engine/Engine.h"
+#include "../../audio-engine/ProcessorGraph.h"
 #include <vector>
 #include <memory>
+#include <unordered_map>
 
 namespace UndergroundBeats {
+
+struct ChannelProcessor {
+    juce::AudioProcessorGraph::NodeID nodeId;
+    std::unique_ptr<juce::AudioProcessor> processor;
+};
 
 /**
  * @class MixerView
@@ -70,6 +77,7 @@ public:
     
 private:
     Engine* audioEngine;
+    std::shared_ptr<ProcessorGraph> processorGraph;
     
     // Scrollable view for channels
     juce::Viewport channelsViewport;
@@ -79,6 +87,10 @@ private:
     std::vector<std::unique_ptr<MixerChannel>> inputChannels;
     std::vector<std::unique_ptr<MixerChannel>> effectReturnChannels;
     std::unique_ptr<MixerChannel> masterChannel;
+    
+    // Audio processing nodes
+    std::unordered_map<int, ChannelProcessor> channelProcessors;
+    juce::AudioProcessorGraph::NodeID masterNodeId;
     
     // Control buttons
     juce::TextButton addChannelButton;
@@ -98,6 +110,16 @@ private:
     // Handler for level changes
     void handleLevelChange(int channelIndex, float level);
     
+    // Audio routing methods
+    void createChannelProcessor(int channelIndex);
+    void removeChannelProcessor(int channelIndex);
+    void connectChannelToMaster(int channelIndex);
+    void disconnectChannelFromMaster(int channelIndex);
+    void updateChannelRouting();
+    
+    // Initialize audio processing
+    void initializeProcessorGraph();
+    void createMasterChannel();
     // Handler for pan changes
     void handlePanChange(int channelIndex, float pan);
     

@@ -13,7 +13,7 @@ public:
     bool moreThanOneInstanceAllowed() override             { return true; }
 
     //==============================================================================
-    void initialise (const juce::String& commandLine) override
+    void initialise (const juce::String& /*commandLine*/) override
     {
         try
         {
@@ -55,9 +55,9 @@ public:
         quit();
     }
 
-    void anotherInstanceStarted (const juce::String& commandLine) override
+    void anotherInstanceStarted (const juce::String& /*commandLine*/) override
     {
-        // Handle another instance starting
+        // Handle another instance starting - currently ignored
     }
 
     //==============================================================================

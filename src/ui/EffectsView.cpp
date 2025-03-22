@@ -40,8 +40,12 @@ EffectsView::~EffectsView() {
     stopTimer();
 }
 
-void EffectsView::paint(juce::Graphics& g) {
+void EffectsView::paint(juce::Graphics& g)
+{
     g.fillAll(getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
+    
+    // Draw connections between effects
+    drawConnections(g);
 }
 
 void EffectsView::resized() {
@@ -112,20 +116,39 @@ void EffectsView::showAddEffectMenu() {
 void EffectsView::showPresetMenu() {
     juce::PopupMenu menu;
     
-    // Add preset categories
+    // Add factory presets submenu
+    juce::PopupMenu factoryMenu;
+    int itemId = 1;
+    
     for (const auto& category : presets.getCategories()) {
-        juce::PopupMenu categoryMenu;
-        
-        // Add presets in this category
-        for (const auto& preset : presets.getPresetList(category)) {
-            categoryMenu.addItem(1, preset.name);
+        if (presets.isFactoryCategory(category)) {
+            juce::PopupMenu categoryMenu;
+            for (const auto& preset : presets.getPresetList(category)) {
+                categoryMenu.addItem(itemId++, preset.name);
+            }
+            factoryMenu.addSubMenu(category, categoryMenu);
         }
-        
-        menu.addSubMenu(category, categoryMenu);
     }
+    menu.addSubMenu("Factory Presets", factoryMenu);
+    
+    // Add user presets submenu
+    juce::PopupMenu userMenu;
+    for (const auto& category : presets.getCategories()) {
+        if (!presets.isFactoryCategory(category)) {
+            juce::PopupMenu categoryMenu;
+            for (const auto& preset : presets.getPresetList(category)) {
+                categoryMenu.addItem(itemId++, preset.name);
+            }
+            userMenu.addSubMenu(category, categoryMenu);
+        }
+    }
+    menu.addSubMenu("User Presets", userMenu);
     
     menu.addSeparator();
     menu.addItem(-1, "Save Current Preset...");
+    
+    // Store the total number of presets for later reference
+    const int totalPresets = itemId - 1;
     
     menu.showMenuAsync(juce::PopupMenu::Options()
                         .withTargetComponent(presetButton),
@@ -133,9 +156,67 @@ void EffectsView::showPresetMenu() {
         if (result == 0) return;
         
         if (result == -1) {
-            // TODO: Implement save preset dialog
+            // Show save preset dialog
+            auto* dialog = new juce::AlertWindow("Save Preset",
+                "Enter preset information:",
+                juce::AlertWindow::NoIcon);
+                
+            dialog->addTextEditor("name", "New Preset", "Preset Name:");
+            dialog->addTextEditor("category", "User", "Category:");
+            dialog->addTextEditor("description", "", "Description:");
+            
+            dialog->addButton("Save", 1, juce::KeyPress(juce::KeyPress::returnKey));
+            dialog->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
+            
+            dialog->enterModalState(true,
+                juce::ModalCallbackFunction::create(
+                    [this, dialog](int result) {
+                        if (result == 1) {
+                            PresetInfo info(
+                                dialog->getTextEditorContents("name"),
+                                dialog->getTextEditorContents("category"),
+                                dialog->getTextEditorContents("description"),
+                                false // Not a factory preset
+                            );
+                            
+                            if (presets.savePreset(effectsChain, info)) {
+                                juce::AlertWindow::showMessageBoxAsync(
+                                    juce::AlertWindow::InfoIcon,
+                                    "Success",
+                                    "Preset saved successfully."
+                                );
+                            } else {
+                                juce::AlertWindow::showMessageBoxAsync(
+                                    juce::AlertWindow::WarningIcon,
+                                    "Error",
+                                    "Failed to save preset."
+                                );
+                            }
+                        }
+                        delete dialog;
+                    }
+                )
+            );
         } else {
-            // TODO: Implement preset loading
+            // Load the selected preset
+            const auto& categories = presets.getCategories();
+            for (const auto& category : categories) {
+                auto presetList = presets.getPresetList(category);
+                if (result <= static_cast<int>(presetList.size())) {
+                    const auto& preset = presetList[result - 1];
+                    if (presets.loadPreset(effectsChain, preset.name)) {
+                        updateUI();
+                    } else {
+                        juce::AlertWindow::showMessageBoxAsync(
+                            juce::AlertWindow::WarningIcon,
+                            "Error",
+                            "Failed to load preset: " + preset.name
+                        );
+                    }
+                    break;
+                }
+                result -= presetList.size();
+            }
         }
     });
 }
