@@ -6,6 +6,8 @@
  */
 
 #include "Effect.h"
+#include "ParameterAutomation.h"
+#include <algorithm>
 
 namespace UndergroundBeats {
 
@@ -18,6 +20,29 @@ Effect::Effect(const std::string& name)
 {
     // Initialize temporary buffer for wet/dry mixing
     tempBuffer.setSize(2, currentBlockSize);
+    
+    // Add common parameters
+    addParameter("mix", 1.0f, 0.0f, 1.0f);
+}
+
+Effect::Parameter* Effect::addParameter(const std::string& name, float defaultValue, float minValue, float maxValue) {
+    auto param = std::make_unique<Parameter>(name, defaultValue, minValue, maxValue);
+    auto* paramPtr = param.get();
+    parameters[name] = std::move(param);
+    return paramPtr;
+}
+
+Effect::Parameter* Effect::getParameter(const std::string& name) {
+    auto it = parameters.find(name);
+    return it != parameters.end() ? it->second.get() : nullptr;
+}
+
+void Effect::updateAutomation(double currentTime) {
+    for (auto& [name, param] : parameters) {
+        if (param && param->getAutomation()) {
+            param->setValue(param->getAutomation()->getValueAtTime(currentTime));
+        }
+    }
 }
 
 Effect::~Effect()

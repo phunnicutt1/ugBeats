@@ -25,6 +25,58 @@ class Effect {
 public:
     Effect(const std::string& name);
     virtual ~Effect();
+
+    /**
+     * @brief Parameter automation handler class
+     */
+    class Parameter {
+    public:
+        Parameter(const std::string& name, float defaultValue, float minValue, float maxValue)
+            : name(name), value(defaultValue), defaultValue(defaultValue)
+            , minValue(minValue), maxValue(maxValue), automation(nullptr) {}
+        
+        void setValue(float newValue) {
+            value = juce::jlimit(minValue, maxValue, newValue);
+        }
+        
+        float getValue() const { return value; }
+        float getDefaultValue() const { return defaultValue; }
+        float getMinValue() const { return minValue; }
+        float getMaxValue() const { return maxValue; }
+        const std::string& getName() const { return name; }
+        
+        void setAutomation(std::unique_ptr<ParameterAutomation> newAutomation) {
+            automation = std::move(newAutomation);
+        }
+        
+        ParameterAutomation* getAutomation() const { return automation.get(); }
+        
+protected:
+    /**
+     * @brief Get a parameter's current value
+     * 
+     * @param name Parameter name
+     * @param defaultValue Value to return if parameter not found
+     * @return Current parameter value or defaultValue if not found
+     */
+    float getParameterValue(const std::string& name, float defaultValue = 0.0f) const {
+        if (auto* param = getParameter(name)) {
+            return param->getValue();
+        }
+        return defaultValue;
+    }
+
+    // Storage for effect parameters
+    std::map<std::string, std::unique_ptr<Parameter>> parameters;
+
+    private:
+        std::string name;
+        float value;
+        float defaultValue;
+        float minValue;
+        float maxValue;
+        std::unique_ptr<ParameterAutomation> automation;
+    };
     
     /**
      * @brief Get the effect name
@@ -32,6 +84,32 @@ public:
      * @return The effect name
      */
     std::string getName() const;
+
+    /**
+     * @brief Add a parameter to the effect
+     * 
+     * @param name Parameter name
+     * @param defaultValue Default value
+     * @param minValue Minimum value
+     * @param maxValue Maximum value
+     * @return Parameter* Pointer to the created parameter
+     */
+    Parameter* addParameter(const std::string& name, float defaultValue, float minValue, float maxValue);
+
+    /**
+     * @brief Get a parameter by name
+     * 
+     * @param name Parameter name
+     * @return Parameter* Pointer to the parameter, or nullptr if not found
+     */
+    Parameter* getParameter(const std::string& name);
+
+    /**
+     * @brief Update all automated parameters for the current time
+     * 
+     * @param currentTime Current time in seconds
+     */
+    void updateAutomation(double currentTime);
     
     /**
      * @brief Set whether the effect is enabled

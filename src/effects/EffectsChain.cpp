@@ -12,155 +12,226 @@
 namespace UndergroundBeats {
 
 EffectsChain::EffectsChain()
-    : currentSampleRate(44100.0)
-    , currentBlockSize(512)
+    : nextNodeId(1)
 {
+    // Create root node as serial chain
+    rootNode = std::make_unique<RoutingNode>(RoutingNode::Type::Serial);
+    registerNode(rootNode.get());
+    
+    // Initialize temp buffer with reasonable default size
+    tempBuffer.setSize(4, 512); // 4 channels for stereo processing + temp buffers
 }
 
-EffectsChain::~EffectsChain()
-{
+EffectsChain::~EffectsChain() = default;
+
+int EffectsChain::createGroup(RoutingNode::Type type, int parentId) {
+    auto parent = getNode(parentId);
+    if (!parent) return 0;
+
+    auto newNode = std::make_unique<RoutingNode>(type);
+    auto* nodePtr = newNode.get();
+    parent->addChild(std::move(newNode));
+    
+    return registerNode(nodePtr);
 }
 
-int EffectsChain::addEffect(std::unique_ptr<Effect> effect)
-{
-    if (effect == nullptr)
-    {
-        return -1;
-    }
+int EffectsChain::addEffect(std::unique_ptr<Effect> effect, int groupId) {
+    if (!effect) return 0;
     
-    // Prepare the effect with the current sample rate and block size
-    effect->prepare(currentSampleRate, currentBlockSize);
+    auto parent = getNode(groupId);
+    if (!parent) return 0;
+
+    auto newNode = std::make_unique<RoutingNode>(std::move(effect));
+    auto* nodePtr = newNode.get();
+    parent->addChild(std::move(newNode));
     
-    // Add the effect to the chain
-    effects.push_back(std::move(effect));
-    
-    // Return the index of the added effect
-    return static_cast<int>(effects.size() - 1);
+    return registerNode(nodePtr);
 }
 
-bool EffectsChain::removeEffect(int index)
+Effect* EffectsChain::getEffect(int nodeId)
 {
-    if (index < 0 || index >= static_cast<int>(effects.size()))
-    {
-        return false;
-    }
-    
-    // Remove the effect from the chain
-    effects.erase(effects.begin() + index);
-    
-    return true;
-}
-
-Effect* EffectsChain::getEffect(int index)
-{
-    if (index < 0 || index >= static_cast<int>(effects.size()))
-    {
-        return nullptr;
-    }
-    
-    return effects[index].get();
+    auto node = getNode(nodeId);
+    return node ? node->getEffect() : nullptr;
 }
 
 Effect* EffectsChain::getEffectByName(const std::string& name)
 {
-    // Search for an effect with the specified name
-    for (auto& effect : effects)
-    {
-        if (effect->getName() == name)
-        {
-            return effect.get();
+    for (const auto& [id, node] : nodeMap) {
+        if (node->getType() == RoutingNode::Type::Effect) {
+            auto* effect = node->getEffect();
+            if (effect && effect->getName() == name) {
+                return effect;
+            }
         }
     }
-    
     return nullptr;
 }
 
-bool EffectsChain::moveEffect(int currentIndex, int newIndex)
+bool EffectsChain::moveNode(int nodeId, int newParentId, int position)
 {
-    if (currentIndex < 0 || currentIndex >= static_cast<int>(effects.size()) ||
-        newIndex < 0 || newIndex >= static_cast<int>(effects.size()) ||
-        currentIndex == newIndex)
-    {
+    auto node = getNode(nodeId);
+    auto newParent = getNode(newParentId);
+    if (!node || !newParent || nodeId == 0) { // Can't move root
         return false;
     }
-    
-    // Move the effect to the new position
-    auto effect = std::move(effects[currentIndex]);
-    effects.erase(effects.begin() + currentIndex);
-    effects.insert(effects.begin() + newIndex, std::move(effect));
-    
+
+    // Get current parent
+    auto currentParent = findParentNode(nodeId);
+    if (!currentParent) {
+        return false;
+    }
+
+    // Find and extract the node from its current parent
+    std::unique_ptr<RoutingNode> nodeToMove;
+    auto& currentChildren = const_cast<std::vector<std::unique_ptr<RoutingNode>>&>(currentParent->getChildren());
+    for (auto it = currentChildren.begin(); it != currentChildren.end(); ++it) {
+        if (it->get() == node) {
+            nodeToMove = std::move(*it);
+            currentChildren.erase(it);
+            break;
+        }
+    }
+
+    if (!nodeToMove) {
+        return false;
+    }
+
+    // Add to new parent at specified position
+    auto& newChildren = const_cast<std::vector<std::unique_ptr<RoutingNode>>&>(newParent->getChildren());
+    if (position < 0 || position > static_cast<int>(newChildren.size())) {
+        position = static_cast<int>(newChildren.size());
+    }
+    newChildren.insert(newChildren.begin() + position, std::move(nodeToMove));
+
     return true;
 }
 
 int EffectsChain::getNumEffects() const
 {
-    return static_cast<int>(effects.size());
-}
-
-void EffectsChain::process(float* buffer, int numSamples)
-{
-    // Process the buffer through each effect in the chain
-    for (auto& effect : effects)
-    {
-        if (effect->isEnabled())
-        {
-            effect->process(buffer, numSamples);
+    int count = 0;
+    for (const auto& [id, node] : nodeMap) {
+        if (node->getType() == RoutingNode::Type::Effect) {
+            count++;
         }
     }
+    return count;
 }
 
-void EffectsChain::processStereo(float* leftBuffer, float* rightBuffer, int numSamples)
-{
-    // Process the buffer through each effect in the chain
-    for (auto& effect : effects)
-    {
-        if (effect->isEnabled())
-        {
-            effect->processStereo(leftBuffer, rightBuffer, numSamples);
+void EffectsChain::process(float* buffer, int numSamples) {
+    rootNode->process(buffer, tempBuffer, numSamples);
+}
+
+void EffectsChain::processStereo(float* leftBuffer, float* rightBuffer, int numSamples) {
+    rootNode->processStereo(leftBuffer, rightBuffer, tempBuffer, numSamples);
+}
+
+void EffectsChain::prepare(double sampleRate, int blockSize) {
+    tempBuffer.setSize(4, blockSize); // Space for stereo processing + temp buffers
+    rootNode->prepare(sampleRate, blockSize);
+}
+
+int EffectsChain::registerNode(RoutingNode* node) {
+    int id = nextNodeId++;
+    nodeMap[id] = node;
+    return id;
+}
+
+void EffectsChain::reset() {
+    // Reset all nodes in the chain
+    std::function<void(RoutingNode*)> resetNode = [](RoutingNode* node) {
+        if (node->getType() == RoutingNode::Type::Effect) {
+            if (auto* effect = node->getEffect()) {
+                effect->reset();
+            }
         }
-    }
-}
-
-void EffectsChain::prepare(double sampleRate, int blockSize)
-{
-    currentSampleRate = sampleRate;
-    currentBlockSize = blockSize;
+        for (const auto& child : node->getChildren()) {
+            resetNode(child.get());
+        }
+    };
     
-    // Prepare all effects in the chain
-    for (auto& effect : effects)
-    {
-        effect->prepare(sampleRate, blockSize);
-    }
+    resetNode(rootNode.get());
 }
 
-void EffectsChain::reset()
-{
-    // Reset all effects in the chain
-    for (auto& effect : effects)
-    {
-        effect->reset();
-    }
-}
-
-std::unique_ptr<juce::XmlElement> EffectsChain::createStateXml() const
-{
-    auto xml = std::make_unique<juce::XmlElement>("EffectsChain");
+std::unique_ptr<juce::XmlElement> EffectsChain::createNodeXml(const RoutingNode* node) const {
+    if (!node) return nullptr;
     
-    // Add each effect's state
-    for (size_t i = 0; i < effects.size(); ++i)
-    {
-        auto effectXml = effects[i]->createStateXml();
-        effectXml->setAttribute("index", static_cast<int>(i));
-        xml->addChildElement(effectXml.release());
+    auto xml = std::make_unique<juce::XmlElement>("RoutingNode");
+    xml->setAttribute("type", static_cast<int>(node->getType()));
+    
+    if (node->getType() == RoutingNode::Type::Effect) {
+        if (auto* effect = node->getEffect()) {
+            xml->setAttribute("effectType", effect->getName());
+            if (auto effectState = effect->createStateXml()) {
+                xml->addChildElement(effectState.release());
+            }
+        }
+    } else {
+        xml->setAttribute("mixLevel", node->getMixLevel());
+        
+        // Save child nodes
+        for (const auto& child : node->getChildren()) {
+            if (auto childXml = createNodeXml(child.get())) {
+                xml->addChildElement(childXml.release());
+            }
+        }
     }
     
     return xml;
 }
 
-bool EffectsChain::restoreStateFromXml(const juce::XmlElement* xml)
-{
-    if (xml == nullptr || xml->getTagName() != "EffectsChain")
-    {
+std::unique_ptr<RoutingNode> EffectsChain::restoreNodeFromXml(const juce::XmlElement* xml) {
+    if (!xml || xml->getTagName() != "RoutingNode") {
+        return nullptr;
+    }
+    
+    auto type = static_cast<RoutingNode::Type>(xml->getIntAttribute("type"));
+    
+    if (type == RoutingNode::Type::Effect) {
+        // Restore effect node
+        std::string effectType = xml->getStringAttribute("effectType").toStdString();
+        std::unique_ptr<Effect> effect;
+        
+        // Create appropriate effect type
+        // TODO: Replace with proper effect factory
+        if (effectType == "Delay") {
+            effect = std::make_unique<Delay>();
+        } else if (effectType == "Reverb") {
+            effect = std::make_unique<Reverb>();
+        }
+        
+        if (effect) {
+            if (auto* effectState = xml->getFirstChildElement()) {
+                effect->restoreStateFromXml(effectState);
+            }
+            return std::make_unique<RoutingNode>(std::move(effect));
+        }
+    } else {
+        // Restore group node
+        auto node = std::make_unique<RoutingNode>(type);
+        node->setMixLevel(xml->getFloatAttribute("mixLevel", 1.0f));
+        
+        // Restore children
+        for (auto* childXml = xml->getFirstChildElement(); childXml != nullptr; 
+             childXml = childXml->getNextElement()) {
+            if (auto child = restoreNodeFromXml(childXml)) {
+                node->addChild(std::move(child));
+            }
+        }
+        
+        return node;
+    }
+    
+    return nullptr;
+}
+
+std::unique_ptr<juce::XmlElement> EffectsChain::createStateXml() const {
+    auto xml = std::make_unique<juce::XmlElement>("EffectChainState");
+    xml->addChildElement(createNodeXml(rootNode.get()).release());
+    return xml;
+}
+
+bool EffectsChain::restoreStateFromXml(const juce::XmlElement* xml) {
+    if (!xml || xml->getTagName() != "EffectChainState") {
         return false;
     }
     

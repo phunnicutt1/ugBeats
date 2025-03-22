@@ -8,9 +8,11 @@
 #pragma once
 
 #include "Effect.h"
+#include "RoutingNode.h"
 #include <vector>
 #include <memory>
 #include <string>
+#include <map>
 
 namespace UndergroundBeats {
 
@@ -26,6 +28,24 @@ class EffectsChain {
 public:
     EffectsChain();
     ~EffectsChain();
+
+    /**
+     * @brief Creates a new routing group
+     * 
+     * @param type The routing type (Serial or Parallel)
+     * @param parentId ID of parent group (0 for root)
+     * @return ID of the new group
+     */
+    int createGroup(RoutingNode::Type type, int parentId = 0);
+
+    /**
+     * @brief Add an effect to a routing group
+     * 
+     * @param effect The effect to add
+     * @param groupId ID of the group to add to (0 for root)
+     * @return The ID of the new effect node
+     */
+    int addEffect(std::unique_ptr<Effect> effect, int groupId = 0);
     
     /**
      * @brief Add an effect to the chain
@@ -120,10 +140,51 @@ public:
      */
     bool restoreStateFromXml(const juce::XmlElement* xml);
     
+    /**
+     * @brief Save the chain's state to XML
+     * 
+     * @return XML element containing the chain state
+     */
+    std::unique_ptr<juce::XmlElement> createStateXml() const;
+    
+    /**
+     * @brief Restore the chain's state from XML
+     * 
+     * @param xml XML element containing the chain state
+     * @return true if successful
+     */
+    bool restoreStateFromXml(const juce::XmlElement* xml);
+
 private:
-    std::vector<std::unique_ptr<Effect>> effects;
-    double currentSampleRate;
-    int currentBlockSize;
+    /**
+     * @brief Save a node's state to XML
+     */
+    std::unique_ptr<juce::XmlElement> createNodeXml(const RoutingNode* node) const;
+    
+    /**
+     * @brief Restore a node from XML
+     */
+    std::unique_ptr<RoutingNode> restoreNodeFromXml(const juce::XmlElement* xml);
+    std::unique_ptr<RoutingNode> rootNode;
+    std::map<int, RoutingNode*> nodeMap;
+    int nextNodeId;
+    juce::AudioBuffer<float> tempBuffer;
+
+    /**
+     * @brief Register a node in the node map
+     * 
+     * @param node Node to register
+     * @return ID assigned to the node
+     */
+    int registerNode(RoutingNode* node);
+
+    /**
+     * @brief Find a node's parent
+     * 
+     * @param nodeId ID of the node to find parent for
+     * @return Parent node or nullptr if not found
+     */
+    RoutingNode* findParentNode(int nodeId) const;
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(EffectsChain)
 };

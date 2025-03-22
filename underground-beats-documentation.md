@@ -114,9 +114,41 @@ SIMD Optimization: Vectorized processing for efficient synthesis algorithms.
 Oscillator Algorithms: Multiple high-quality oscillator implementations with minimal aliasing.
 
 2.2.3 Effects Processing
-The effects system provides audio signal processing capabilities through a chain of effect units. Key design considerations include:
+The effects system provides sophisticated audio signal processing capabilities through a flexible, node-based routing architecture. Our implementation addresses several key design considerations:
 
-Effect Chain Management: Serial and parallel routing configurations with flexible signal flow.
+2.2.3.1 Parameter Automation
+- Time-synchronized parameter control with interpolation
+- Support for multiple curve types (linear, quadratic, cubic)
+- Lock-free parameter updates for real-time processing
+- Automated parameter modulation with precise timing
+
+2.2.3.2 Effect Chain Architecture
+- Node-based routing system supporting both serial and parallel configurations
+- Nested effect groups with independent mix levels
+- Dynamic reorganization of effect chains during playback
+- Efficient audio buffer management for parallel processing
+- Lock-free communication between UI and audio threads
+
+2.2.3.3 Preset Management
+- Hierarchical preset system with categories and metadata
+- Support for both factory and user presets
+- XML-based serialization for effect chains and parameters
+- Automatic preset directory management
+- Non-destructive preset loading with state validation
+
+2.2.3.4 Implementation Details
+- Base Effect class with automated parameter support
+- RoutingNode system for flexible effect configurations
+- EffectsChain manager for complex routing scenarios
+- PresetManager for preset organization and persistence
+- Efficient temporary buffer management for parallel processing
+- Thread-safe parameter updates and automation
+
+The system is designed to provide maximum flexibility while maintaining optimal performance:
+- Zero-allocation audio processing path
+- Lock-free parameter updates
+- Efficient parallel processing with minimal overhead
+- Thread-safe preset loading and parameter automation
 Parameter Automation: Time-synchronized parameter changes with curve interpolation.
 Preset System: Saving and loading effect configurations with metadata.
 Visualization: Real-time visualization of audio signal characteristics.
@@ -130,12 +162,35 @@ Transport Control: Synchronized playback, recording, and timing management.
 Quantization: Rhythmic correction with various quantization modes and groove templates.
 
 2.2.5 Integrated Effects Processing
-A key innovation in Underground Beats is the tight integration of effects processing with beat generation and manipulation. Key design considerations include:
+A key innovation in Underground Beats is the tight integration of effects processing with beat generation and manipulation. Our node-based routing architecture enables sophisticated effect combinations and real-time manipulation:
 
-- Real-time Effects Application: Apply effects during the creative process rather than as a post-processing step
-- Per-Component Processing: Apply different effects chains to individual components (bass, drums, etc.)
-- Effects Randomization: Generate variations with different effect combinations 
-- Preset Generation: Create and save effect chains that complement specific beat styles
+2.2.5.1 Creative Effect Routing
+- Dynamic parallel and serial effect chains
+- Independent processing of beat components (drums, bass, etc.)
+- Real-time effect chain reorganization
+- Automated parameter modulation for creative sound design
+- Nested effect groups with mix level control
+
+2.2.5.2 Beat-Synchronized Effects
+- Time-synchronized parameter automation
+- Beat-division based delay times
+- Tempo-matched modulation rates
+- Quantized effect transitions
+- Pattern-based parameter sequencing
+
+2.2.5.3 Preset Integration
+- Context-aware preset suggestions
+- Style-based effect chain templates
+- Automatic parameter adaptation to tempo
+- Beat component-specific preset collections
+- Real-time preset morphing capabilities
+
+2.2.5.4 Performance Optimization
+- Zero-latency effect bypassing
+- Efficient parallel processing
+- Dynamic buffer allocation
+- CPU load balancing
+- Automatic latency compensation
 - Parameter Morphing: Smoothly transition between effect parameter settings as variations cycle
 
 2.2.6 User Interface
