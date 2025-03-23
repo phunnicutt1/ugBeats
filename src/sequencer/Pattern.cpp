@@ -303,8 +303,12 @@ float Pattern::getParameterValueAtTime(const std::string& paramId, double time, 
                 result = prevPoint->value + (nextPoint->value - prevPoint->value) * static_cast<float>(s);
             }
             break;
+        case CurveType::Step:
+            // For step curves, use the previous value until halfway, then jump to next value
+            result = (timeFraction < 0.5) ? prevPoint->value : nextPoint->value;
+            break;
         case CurveType::Linear:
-            // Already calculated above
+            // Already calculated above using linear interpolation
             break;
     }
     
@@ -423,7 +427,11 @@ bool Pattern::restoreStateFromXml(const juce::XmlElement* xml)
                 {
                     double time = pointXml->getDoubleAttribute("time", 0.0);
                     float value = static_cast<float>(pointXml->getDoubleAttribute("value", 0.0));
-                    int curveType = pointXml->getIntAttribute("curveType", 0);
+                    int curveTypeInt = pointXml->getIntAttribute("curveType", 0);
+                    // Convert int to CurveType safely
+                    CurveType curveType = static_cast<CurveType>(
+                        std::min(curveTypeInt, static_cast<int>(CurveType::Step))
+                    );
                     
                     addAutomationPoint(paramId, time, value, curveType);
                 }

@@ -76,11 +76,13 @@ void MixerView::initializeProcessorGraph()
 void MixerView::createMasterChannel()
 {
     // Create master gain processor
-    auto masterProcessor = std::make_unique<juce::AudioProcessorGraph::AudioGraphIOProcessor>(
+    auto gainProcessor = std::make_unique<juce::AudioProcessorGraph::AudioGraphIOProcessor>(
         juce::AudioProcessorGraph::AudioGraphIOProcessor::audioOutputNode);
+    auto nodeId = juce::AudioProcessorGraph::NodeID(1);  // Master is always node 1
+    auto masterProcessor = std::make_unique<juce::AudioProcessorGraph::Node>(nodeId, std::move(gainProcessor));
         
     // Add to graph
-    masterNodeId = processorGraph->addProcessor(std::move(masterProcessor), "master");
+    masterNodeId = processorGraph->addNode(std::move(masterProcessor), "master");
 }
 
 void MixerView::createChannelProcessor(int channelIndex)
@@ -88,13 +90,18 @@ void MixerView::createChannelProcessor(int channelIndex)
     if (!processorGraph)
         return;
         
-    // Create channel gain processor
-    auto gainProcessor = std::make_unique<juce::GainProcessor>();
-    auto nodeId = processorGraph->addProcessor(std::move(gainProcessor), 
+    // Create channel gain processor with unique ID
+    auto gainProcessor = std::make_unique<juce::AudioProcessorGraph::AudioGraphIOProcessor>(
+        juce::AudioProcessorGraph::AudioGraphIOProcessor::audioInputNode);
+    auto nodeId = juce::AudioProcessorGraph::NodeID(channelIndex + 2); // Start at 2 since master is 1
+    auto channelNode = std::make_unique<juce::AudioProcessorGraph::Node>(nodeId, std::move(gainProcessor));
+    
+    // Add to graph
+    auto assignedNodeId = processorGraph->addNode(std::move(channelNode), 
         "channel_" + std::to_string(channelIndex));
         
     // Store processor info
-    channelProcessors[channelIndex] = ChannelProcessor{ nodeId, nullptr };
+    channelProcessors[channelIndex] = ChannelProcessor{ assignedNodeId, nullptr };
 }
 
 void MixerView::removeChannelProcessor(int channelIndex)
@@ -105,7 +112,7 @@ void MixerView::removeChannelProcessor(int channelIndex)
     auto it = channelProcessors.find(channelIndex);
     if (it != channelProcessors.end()) {
         disconnectChannelFromMaster(channelIndex);
-        processorGraph->removeProcessor(it->second.nodeId);
+        processorGraph->removeNode(std::to_string(it->second.nodeId.uid));
         channelProcessors.erase(it);
     }
 }
@@ -118,8 +125,8 @@ void MixerView::connectChannelToMaster(int channelIndex)
     auto it = channelProcessors.find(channelIndex);
     if (it != channelProcessors.end()) {
         // Connect both left and right channels
-        processorGraph->connectNodes(it->second.nodeId, 0, masterNodeId, 0);
-        processorGraph->connectNodes(it->second.nodeId, 1, masterNodeId, 1);
+        processorGraph->connectNodes(std::to_string(it->second.nodeId.uid), 0, std::to_string(masterNodeId.uid), 0);
+        processorGraph->connectNodes(std::to_string(it->second.nodeId.uid), 1, std::to_string(masterNodeId.uid), 1);
     }
 }
 
@@ -130,7 +137,9 @@ void MixerView::disconnectChannelFromMaster(int channelIndex)
         
     auto it = channelProcessors.find(channelIndex);
     if (it != channelProcessors.end()) {
-        processorGraph->disconnectNodes(it->second.nodeId, masterNodeId);
+        // Disconnect both left and right channels
+        processorGraph->disconnectNodes(std::to_string(it->second.nodeId.uid), 0, std::to_string(masterNodeId.uid), 0);
+        processorGraph->disconnectNodes(std::to_string(it->second.nodeId.uid), 1, std::to_string(masterNodeId.uid), 1);
     }
 }
 
