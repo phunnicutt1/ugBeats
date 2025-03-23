@@ -77,6 +77,9 @@ float Effect::getMix() const
 
 void Effect::process(float* buffer, int numSamples)
 {
+    // Update automation parameters before processing
+    updateAutomation(currentTimeInSeconds);
+    
     if (!enabled || mixLevel <= 0.0f)
     {
         // Effect is disabled or fully dry, do nothing

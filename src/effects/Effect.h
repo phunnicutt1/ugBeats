@@ -252,6 +252,7 @@ protected:
     float mixLevel;
     double currentSampleRate;
     int currentBlockSize;
+    double currentTimeInSeconds;  // Current playback position
     
     // Temporary buffer for wet/dry mixing
     juce::AudioBuffer<float> tempBuffer;
