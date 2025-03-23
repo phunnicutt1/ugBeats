@@ -68,6 +68,42 @@ public:
         std::unique_ptr<ParameterAutomation> automation;
     };
 
+public:
+    /**
+     * @brief Get the effect name
+     * 
+     * @return The effect name
+     */
+    std::string getName() const;
+    
+    /**
+     * @brief Set whether the effect is enabled
+     * 
+     * @param enabled true to enable, false to bypass
+     */
+    void setEnabled(bool enabled);
+    
+    /**
+     * @brief Check if the effect is enabled
+     * 
+     * @return true if enabled, false if bypassed
+     */
+    bool isEnabled() const;
+    
+    /**
+     * @brief Set the effect's wet/dry mix
+     * 
+     * @param mix The wet/dry mix (0 = dry, 1 = wet)
+     */
+    void setMix(float mix);
+    
+    /**
+     * @brief Get the current wet/dry mix
+     * 
+     * @return The current wet/dry mix
+     */
+    float getMix() const;
+
 protected:
     /**
      * @brief Get a parameter's current value
@@ -85,13 +121,6 @@ protected:
 
     // Storage for effect parameters
     std::map<std::string, std::unique_ptr<Parameter>> parameters;
-    
-    /**
-     * @brief Get the effect name
-     * 
-     * @return The effect name
-     */
-    std::string getName() const;
 
     /**
      * @brief Add a parameter to the effect

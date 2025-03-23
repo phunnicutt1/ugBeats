@@ -29,71 +29,35 @@ public:
     EffectsChain();
     ~EffectsChain();
 
-    /**
-     * @brief Creates a new routing group
-     * 
-     * @param type The routing type (Serial or Parallel)
-     * @param parentId ID of parent group (0 for root)
-     * @return ID of the new group
-     */
+    // Node management
     int createGroup(RoutingNode::Type type, int parentId = 0);
-
-    /**
-     * @brief Add an effect to a routing group
-     * 
-     * @param effect The effect to add
-     * @param groupId ID of the group to add to (0 for root)
-     * @return The ID of the new effect node
-     */
     int addEffect(std::unique_ptr<Effect> effect, int groupId = 0);
+    bool removeNode(int nodeId);
+    bool moveNode(int nodeId, int newParentId, int position = -1);
     
-    /**
-     * @brief Add an effect to the chain
-     * 
-     * @param effect The effect to add
-     * @return The index of the added effect
-     */
-    int addEffect(std::unique_ptr<Effect> effect);
-    
-    /**
-     * @brief Remove an effect from the chain
-     * 
-     * @param index The index of the effect to remove
-     * @return true if the effect was removed
-     */
-    bool removeEffect(int index);
-    
-    /**
-     * @brief Get an effect from the chain
-     * 
-     * @param index The index of the effect to get
-     * @return Pointer to the effect, or nullptr if not found
-     */
-    Effect* getEffect(int index);
-    
-    /**
-     * @brief Get an effect from the chain by name
-     * 
-     * @param name The name of the effect to get
-     * @return Pointer to the effect, or nullptr if not found
-     */
+    // Effect access
+    Effect* getEffect(int nodeId);
     Effect* getEffectByName(const std::string& name);
-    
-    /**
-     * @brief Move an effect to a new position in the chain
-     * 
-     * @param currentIndex The current index of the effect
-     * @param newIndex The new index for the effect
-     * @return true if the effect was moved
-     */
-    bool moveEffect(int currentIndex, int newIndex);
-    
-    /**
-     * @brief Get the number of effects in the chain
-     * 
-     * @return The number of effects
-     */
     int getNumEffects() const;
+    
+    // Audio processing
+    void prepare(double sampleRate, int blockSize);
+    void process(float* buffer, int numSamples);
+    void processBlock(juce::AudioBuffer<float>& buffer);
+    void reset();
+
+    // State management
+    std::unique_ptr<juce::XmlElement> createStateXml() const;
+    bool restoreStateFromXml(const juce::XmlElement* xml);
+
+protected:
+    double currentSampleRate;
+    int currentBlockSize;
+    std::unique_ptr<RoutingNode> rootNode;
+    
+    RoutingNode* getNode(int nodeId) const;
+    std::unique_ptr<juce::XmlElement> createNodeXml(const RoutingNode* node) const;
+    std::unique_ptr<RoutingNode> restoreNodeFromXml(const juce::XmlElement* xml);
     
     /**
      * @brief Process a mono buffer of samples through the effect chain
