@@ -13,7 +13,7 @@ ParameterAutomation::ParameterAutomation(const std::string& name)
 
 ParameterAutomation::~ParameterAutomation() = default;
 
-void ParameterAutomation::addPoint(double time, float value, juce::CurveType curveType) {
+void ParameterAutomation::addPoint(double time, float value, CurveType curveType) {
     AutomationPoint newPoint(time, value, curveType);
     
     // Find insertion point to maintain time-sorted order
@@ -74,21 +74,34 @@ float ParameterAutomation::interpolate(const AutomationPoint& p1, const Automati
     
     // Apply curve type
     switch (p1.curveType) {
-        case juce::CurveType::linear:
+        case CurveType::Linear:
             // Linear interpolation
             return p1.value + (p2.value - p1.value) * static_cast<float>(t);
             
-        case juce::CurveType::quadratic:
-            // Quadratic ease-in curve
+        case CurveType::Exponential:
+            // Exponential curve
             t = t * t;
             return p1.value + (p2.value - p1.value) * static_cast<float>(t);
             
-        case juce::CurveType::cubic:
-            // Cubic ease-in-out curve
-            t = t < 0.5 ? 4 * t * t * t : 1 - std::pow(-2 * t + 2, 3) / 2;
+        case CurveType::Logarithmic:
+            // Logarithmic curve
+            t = std::sqrt(t);
             return p1.value + (p2.value - p1.value) * static_cast<float>(t);
             
+        case CurveType::SCurve:
+            // S-curve using sigmoid function
+            {
+                double x = (t - 0.5) * 2.0; // Scale to -1 to 1
+                double s = (1.0 / (1.0 + std::exp(-6.0 * x)) - 0.5) * 2.0;
+                return p1.value + (p2.value - p1.value) * static_cast<float>(s);
+            }
+            
+        case CurveType::Step:
+            // Step function - jump at midpoint
+            return (t < 0.5) ? p1.value : p2.value;
+            
         default:
+            // Default to linear
             return p1.value + (p2.value - p1.value) * static_cast<float>(t);
     }
 }
@@ -101,7 +114,8 @@ std::unique_ptr<juce::XmlElement> ParameterAutomation::createXml() const {
         auto pointXml = xml->createNewChildElement("Point");
         pointXml->setAttribute("time", point.time);
         pointXml->setAttribute("value", point.value);
-        pointXml->setAttribute("curve", static_cast<int>(point.curveType));
+        // Store curve type as int for backward compatibility
+        pointXml->setAttribute("curveType", static_cast<int>(point.curveType));
     }
     
     return xml;
