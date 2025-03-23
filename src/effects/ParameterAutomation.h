@@ -11,21 +11,9 @@
 #include <vector>
 #include <memory>
 #include <string>
+#include "../common/AutomationTypes.h"
 
 namespace UndergroundBeats {
-
-/**
- * @class AutomationPoint
- * @brief Represents a single point in an automation curve
- */
-struct AutomationPoint {
-    double time;           // Time in seconds
-    float value;          // Parameter value
-    juce::CurveType curveType;  // Type of curve to next point
-    
-    AutomationPoint(double t, float v, juce::CurveType c = juce::CurveType::linear)
-        : time(t), value(v), curveType(c) {}
-};
 
 /**
  * @class ParameterAutomation
@@ -48,7 +36,7 @@ public:
      * @param value Parameter value
      * @param curveType Type of curve to next point
      */
-    void addPoint(double time, float value, juce::CurveType curveType = juce::CurveType::linear);
+    void addPoint(double time, float value, CurveType curveType = CurveType::Linear);
     
     /**
      * @brief Remove an automation point

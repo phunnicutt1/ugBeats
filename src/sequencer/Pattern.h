@@ -12,6 +12,7 @@
 #include <vector>
 #include <unordered_map>
 #include <memory>
+#include "../common/AutomationTypes.h"
 
 namespace UndergroundBeats {
 
@@ -30,19 +31,6 @@ struct NoteEvent {
     }
 };
 
-/**
- * @brief Data structure to represent a parameter automation point
- */
-struct AutomationPoint {
-    double time;       // Time in beats
-    float value;       // Parameter value (0-1)
-    int curveType;     // Curve type for interpolation
-    
-    AutomationPoint(double time = 0.0, float value = 0.0, int curveType = 0)
-        : time(time), value(value), curveType(curveType)
-    {
-    }
-};
 
 /**
  * @class Pattern

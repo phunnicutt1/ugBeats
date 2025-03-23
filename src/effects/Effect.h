@@ -77,7 +77,7 @@ protected:
      * @return Current parameter value or defaultValue if not found
      */
     float getParameterValue(const std::string& name, float defaultValue = 0.0f) const {
-        if (auto* param = getParameter(name)) {
+        if (const auto* param = getParameter(name)) {
             return param->getValue();
         }
         return defaultValue;
@@ -110,7 +110,7 @@ protected:
      * @param name Parameter name
      * @return Parameter* Pointer to the parameter, or nullptr if not found
      */
-    Parameter* getParameter(const std::string& name);
+    Parameter* getParameter(const std::string& name) const;
 
     /**
      * @brief Update all automated parameters for the current time

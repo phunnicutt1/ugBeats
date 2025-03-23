@@ -32,7 +32,7 @@ Effect::Parameter* Effect::addParameter(const std::string& name, float defaultVa
     return paramPtr;
 }
 
-Effect::Parameter* Effect::getParameter(const std::string& name) {
+Effect::Parameter* Effect::getParameter(const std::string& name) const {
     auto it = parameters.find(name);
     return it != parameters.end() ? it->second.get() : nullptr;
 }
