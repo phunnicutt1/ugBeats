@@ -144,31 +144,49 @@ void PatternGridComponent::timerCallback()
 {
     if (pattern)
     {
-        // Update grid from pattern if needed
-        bool gridChanged = false;
+        // Update grid cells from pattern notes if needed
+        bool needsUpdate = false;
         
-        for (int y = 0; y < rows; ++y)
+        // Check if notes have changed
+        if (pattern->getNoteCount() != lastNoteCount)
         {
-            for (int x = 0; x < columns; ++x)
+            needsUpdate = true;
+        }
+        else
+        {
+            // Check if playback position has changed
+            double currentPosition = pattern->getCurrentPosition();
+            if (std::abs(currentPosition - lastPlaybackPosition) > 0.001)
             {
-                if (grid[y][x].isActive)
-                {
-                    // Convert grid position to note parameters
-                    int noteNumber = rows - 1 - y; // Convert row to MIDI note
-                    double startTime = x / 4.0; // Convert column to beats
-                    
-                    // Add or update note in pattern
-                    pattern->addNote(noteNumber, grid[y][x].velocity, startTime, 0.25);
-                    gridChanged = true;
-                }
+                lastPlaybackPosition = currentPosition;
+                needsUpdate = true;
             }
         }
         
-        if (gridChanged)
-            pattern->notifyPatternChanged();
+        if (needsUpdate)
+        {
+            // Clear grid
+            for (auto& row : grid)
+                std::fill(row.begin(), row.end(), GridCell());
+            
+            // Update from pattern
+            for (int i = 0; i < pattern->getNoteCount(); ++i)
+            {
+                auto note = pattern->getNote(i);
+                int x = static_cast<int>(note.startTime * 4.0); // Assuming 16th note grid
+                int y = rows - 1 - (note.note % rows); // Map MIDI notes to grid rows
+                
+                if (x >= 0 && x < columns && y >= 0 && y < rows)
+                {
+                    grid[y][x].isActive = true;
+                    grid[y][x].velocity = note.velocity;
+                }
+            }
+            
+            lastNoteCount = pattern->getNoteCount();
+            repaint();
+        }
     }
-    
-    repaint();
 }
 
 void PatternGridComponent::setGridSize(int numRows, int numColumns)
@@ -197,12 +215,6 @@ juce::Point<int> PatternGridComponent::pointToGridPosition(juce::Point<int> poin
         return juce::Point<int>(gridX, gridY);
         
     return juce::Point<int>(-1, -1);
-}
-
-void PatternGridComponent::timerCallback()
-{
-    // TODO: Update from pattern playback position
-    repaint();
 }
 
 void PatternGridComponent::resized()

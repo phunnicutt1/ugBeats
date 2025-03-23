@@ -45,6 +45,10 @@ private:
     bool drawMode { true }; // true = draw, false = erase
     juce::Point<int> lastGridPosition { -1, -1 };
     
+    // Pattern state tracking
+    int lastNoteCount = 0;
+    double lastPlaybackPosition = 0.0;
+    
     // Constants
     static constexpr int UPDATE_INTERVAL_MS = 50;
     

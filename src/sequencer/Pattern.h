@@ -247,6 +247,9 @@ private:
     // Empty vector for returning when parameter not found
     static const std::vector<AutomationPoint> emptyAutomationPoints;
     
+    // Playback state
+    double currentPosition = 0.0;
+    
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Pattern)
 };
 
