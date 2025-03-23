@@ -124,14 +124,25 @@ target_sources(UndergroundBeats PRIVATE
     src/ui/components/PatternEditor.h
     src/ui/components/PatternControlPanel.cpp
     src/ui/components/PatternControlPanel.h
+    src/ui/components/PatternGridComponent.cpp
+    src/ui/components/PatternGridComponent.h
+    src/ui/components/TrackListComponent.cpp
+    src/ui/components/TrackListComponent.h
     src/ui/views/MixerView.cpp
     src/ui/views/MixerView.h
     src/ui/views/PatternEditorView.cpp
     src/ui/views/PatternEditorView.h
+    src/ui/views/SequencerView.cpp
+    src/ui/views/SequencerView.h
+    src/ui/views/SettingsView.cpp
+    src/ui/views/SettingsView.h
     src/ui/components/synth/FilterEnvelopePanel.cpp
     src/ui/components/synth/FilterEnvelopePanel.h
+    src/ui/components/synth/FilterPanel.cpp
     src/ui/components/synth/FilterPanel.h
+    src/ui/components/synth/EnvelopePanel.cpp
     src/ui/components/synth/EnvelopePanel.h
+    src/ui/components/synth/OscillatorPanel.cpp
     src/ui/components/synth/OscillatorPanel.h
     
     # Utilities

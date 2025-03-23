@@ -70,9 +70,25 @@ MainComponent::MainComponent() :
             stopButton.setEnabled(false);
         };
         
+        // Play button starts playback
+        playButton.onClick = [this] { 
+            sequencer->play();
+            playButton.setEnabled(false);
+            stopButton.setEnabled(true);
+        };
+        
+        // Stop button stops playback
+        stopButton.onClick = [this] {
+            sequencer->stop();
+            playButton.setEnabled(true);
+            stopButton.setEnabled(false);
+        };
+        
+        // Record button toggles between play/stop for now (recording to be implemented)
         recordButton.onClick = [this] {
-            bool isRecording = sequencer->toggleRecording();
-            recordButton.setToggleState(isRecording, juce::dontSendNotification);
+            sequencer->togglePlayStop();
+            bool isPlaying = sequencer->isPlaying();
+            recordButton.setToggleState(isPlaying, juce::dontSendNotification);
         };
         
         // Initialize button states
@@ -190,15 +206,15 @@ void MainComponent::createAudioProcessors()
     sequencer->setTimeSignature(4, 4);
     
     // Connect sequencer to MIDI engine
-    sequencer->setNoteOnCallback([this](int note, int velocity, double timeStamp) {
-        oscillatorBank->setMasterFrequency(AudioMath::midiNoteToFrequency(note));
-        envelopeProcessor->noteOn();
-        filterEnvelope->noteOn();
-    });
-    
-    sequencer->setNoteOffCallback([this](int note, double timeStamp) {
-        envelopeProcessor->noteOff();
-        filterEnvelope->noteOff();
+    sequencer->setNoteEventCallback([this](const NoteEvent& event) {
+        if (event.velocity > 0) {  // Note On
+            oscillatorBank->setMasterFrequency(AudioMath::midiNoteToFrequency(event.note));
+            envelopeProcessor->noteOn();
+            filterEnvelope->noteOn();
+        } else {  // Note Off
+            envelopeProcessor->noteOff();
+            filterEnvelope->noteOff();
+        }
     });
     
     // Set up the oscillator bank
@@ -324,7 +340,8 @@ void MainComponent::prepareToPlay(int samplesPerBlockExpected, double sampleRate
         
         // Prepare sequencer components
         sequencer->prepare(sampleRate, samplesPerBlockExpected);
-        midiEngine->prepare(sampleRate, samplesPerBlockExpected);
+        
+        // MidiEngine doesn't need prepare - it's handled by the sequencer
         
         juce::Logger::writeToLog("MainComponent: Audio processors and sequencer prepared.");
     }
@@ -354,10 +371,14 @@ void MainComponent::getNextAudioBlock(const juce::AudioSourceChannelInfo& buffer
     // Process through envelope
     envelopeProcessor->process(monoBuffer, bufferToFill.numSamples);
     
-    // Update filter envelope
-    float filterEnvValue = filterEnvelope->getNextValue();
-    filter->setCutoff(filterEnvelope->getBaseCutoff() * filterEnvValue);
-    filter->setResonance(filterEnvelope->getBaseResonance() * filterEnvValue);
+    // Update filter envelope and calculate modulation
+    float filterEnvValue = filterEnvelope->getEnvelope()->getCurrentLevel();  // Get current envelope value
+    float cutoffMod = filterEnvelope->getBaseCutoff() * (1.0f + filterEnvValue * filterEnvelope->getCutoffEnvelopeAmount());
+    float resonanceMod = filterEnvelope->getBaseResonance() * (1.0f + filterEnvValue * filterEnvelope->getResonanceEnvelopeAmount());
+    
+    // Apply modulated values to filter
+    filter->setCutoff(cutoffMod);
+    filter->setResonance(resonanceMod);
     
     // Process through filter
     filter->process(monoBuffer, bufferToFill.numSamples);

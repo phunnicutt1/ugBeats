@@ -180,10 +180,6 @@ void Pattern::removeListener(juce::ActionListener* listener)
 void Pattern::notifyChange()
 {
     broadcaster.sendActionMessage("patternChanged");
-    // Remove the note
-    notes.erase(notes.begin() + index);
-    
-    return -1;
 }
 
 const NoteEvent* Pattern::getNote(int index) const
