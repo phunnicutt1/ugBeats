@@ -28,6 +28,7 @@ target_include_directories(UndergroundBeats PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ui
     ${CMAKE_CURRENT_SOURCE_DIR}/src/project
     ${CMAKE_CURRENT_SOURCE_DIR}/src/utils
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/common
 )
 
 # JUCE modules
@@ -81,6 +82,9 @@ target_sources(UndergroundBeats PRIVATE
     src/synthesis/EnvelopeGenerator.cpp
     src/synthesis/EnvelopeGenerator.h
     
+    # Common
+    src/common/AutomationTypes.h
+    
     # Effects
     src/effects/Effect.cpp
     src/effects/Effect.h
@@ -92,6 +96,8 @@ target_sources(UndergroundBeats PRIVATE
     src/effects/Reverb.h
     src/effects/EffectProcessorNode.cpp
     src/effects/EffectProcessorNode.h
+    src/effects/ParameterAutomation.cpp
+    src/effects/ParameterAutomation.h
     
     # Sequencer
     src/sequencer/Sequencer.cpp
