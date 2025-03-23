@@ -53,8 +53,6 @@ private:
     
     // UI update interval in milliseconds
     static constexpr int UPDATE_INTERVAL_MS = 50;
-    
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SequencerView)
 };
 
 } // namespace UndergroundBeats

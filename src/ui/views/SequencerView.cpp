@@ -230,14 +230,14 @@ void SequencerView::resized()
     
     // Layout pattern controls
     auto controlsHeight = 30;
-    auto controlsArea = area.removeFromTop(controlsHeight);
-    patternSelector.setBounds(controlsArea.removeFromLeft(150));
-    controlsArea.removeFromLeft(10); // spacing
-    newPatternButton.setBounds(controlsArea.removeFromLeft(100));
-    controlsArea.removeFromLeft(10); // spacing
-    deletePatternButton.setBounds(controlsArea.removeFromLeft(100));
-    controlsArea.removeFromLeft(10); // spacing
-    snapToGridButton.setBounds(controlsArea.removeFromLeft(100));
+    auto patternControlsArea = area.removeFromTop(controlsHeight);
+    patternSelector.setBounds(patternControlsArea.removeFromLeft(150));
+    patternControlsArea.removeFromLeft(10); // spacing
+    newPatternButton.setBounds(patternControlsArea.removeFromLeft(100));
+    patternControlsArea.removeFromLeft(10); // spacing
+    deletePatternButton.setBounds(patternControlsArea.removeFromLeft(100));
+    patternControlsArea.removeFromLeft(10); // spacing
+    snapToGridButton.setBounds(patternControlsArea.removeFromLeft(100));
     
     // Layout track management
     auto trackListWidth = 250; // Increased width for controls
