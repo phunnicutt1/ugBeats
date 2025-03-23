@@ -113,7 +113,7 @@ void PatternControlPanel::paint(juce::Graphics& g)
     
     // Section titles
     g.setColour(juce::Colours::white);
-    g.setFont(juce::Font::FontStyleHelpers::makeFont(14.0f, juce::Font::bold));
+    g.setFont(juce::Font(14.0f).withStyle(juce::Font::bold));
     
     auto area = getLocalBounds().reduced(10);
     int leftColumnWidth = area.getWidth() / 2 - 5;

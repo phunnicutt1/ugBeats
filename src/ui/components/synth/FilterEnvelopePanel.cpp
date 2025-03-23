@@ -52,7 +52,7 @@ void FilterEnvelopePanel::paint(juce::Graphics& g)
     g.fillAll(juce::Colours::black);
     
     g.setColour(juce::Colours::white);
-    g.setFont(18.0f);
+    g.setFont(juce::Font(juce::FontHeavy, 18.0f));
     g.drawText(panelName, getLocalBounds().removeFromTop(25), juce::Justification::centred, true);
 }
 

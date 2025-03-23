@@ -239,11 +239,11 @@ void OscillatorPanel::paint(juce::Graphics& g)
     
     // Draw title
     g.setColour(juce::Colours::white);
-    g.setFont(juce::Font(20.0f, juce::Font::bold));
+    g.setFont(juce::Font(20.0f).withStyle(juce::Font::bold));
     g.drawText(oscBankName, getLocalBounds().reduced(10, 10), juce::Justification::topLeft, true);
     
     // Draw oscillator labels
-    g.setFont(juce::Font(16.0f, juce::Font::bold));
+    g.setFont(juce::Font(16.0f).withStyle(juce::Font::bold));
     juce::Rectangle<int> oscArea = getLocalBounds().withTrimmedTop(160).reduced(10);
     int halfWidth = oscArea.getWidth() / 2;
     

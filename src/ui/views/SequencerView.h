@@ -45,9 +45,6 @@ private:
     juce::TextButton addTrackButton { "Add Track" };
     juce::TextButton deleteTrackButton { "Delete Track" };
     
-    // Sequencer engine reference
-    std::shared_ptr<UndergroundBeats::Sequencer> sequencer;
-    
     // UI update interval in milliseconds
     static constexpr int UPDATE_INTERVAL_MS = 50;
     

@@ -9,14 +9,12 @@ namespace UndergroundBeats {
  * @class FilterPanel
  * @brief UI panel for filter controls
  */
-class FilterPanel : public juce::Component
+class FilterPanel : public juce::Component,
+                   public juce::Slider::Listener,
+                   public juce::ComboBox::Listener
 {
 public:
-    FilterPanel(const juce::String& name = "Filter")
-        : panelName(name)
-    {
-        // Stub implementation
-    }
+    FilterPanel(const juce::String& name = "Filter");
     
     ~FilterPanel() override = default;
     
@@ -39,8 +37,20 @@ public:
         g.drawText(panelName, getLocalBounds(), juce::Justification::centred, true);
     }
     
+    void resized() override;
+
 private:
+    void sliderValueChanged(juce::Slider* slider) override;
+    void comboBoxChanged(juce::ComboBox* comboBox) override;
+    
     juce::String panelName;
+    
+    std::unique_ptr<juce::ComboBox> filterTypeSelector;
+    std::unique_ptr<juce::Slider> cutoffSlider;
+    std::unique_ptr<juce::Slider> resonanceSlider;
+    
+    std::unique_ptr<juce::Label> cutoffLabel;
+    std::unique_ptr<juce::Label> resonanceLabel;
     
     std::function<void(FilterType)> filterTypeChangeCallback;
     std::function<void(float)> cutoffChangeCallback;

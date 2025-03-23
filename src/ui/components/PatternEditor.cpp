@@ -144,13 +144,30 @@ void PatternEditor::mouseDown(const juce::MouseEvent& e)
 
 void PatternEditor::mouseDrag(const juce::MouseEvent& e)
 {
-    // Basic implementation - nothing for now
-}
+    if (!pattern || !dragging || selectedNote < 0)
+        return;
+
+    const float mouseX = e.position.x;
+    const float mouseY = e.position.y;
+    
+    if (resizing) {
+        // Calculate new duration based on drag distance
+        const double beatPosition = (mouseX / zoomX) + scrollX;
+        double newDuration = std::max(gridSize, beatPosition - selectedNoteStart);
+        newDuration = std::round(newDuration / gridSize) * gridSize;
+        resizeNote(selectedNote, newDuration);
+    } else {
+        // Move note
+        const double beatPosition = std::round(((mouseX / zoomX) + scrollX) / gridSize) * gridSize;
+        const int noteNumber = juce::jlimit(0, 127, 127 - static_cast<int>((mouseY + scrollY) / zoomY));
+        moveNote(selectedNote, beatPosition, noteNumber);
+    }
 
 void PatternEditor::mouseUp(const juce::MouseEvent& e)
 {
-    // Basic implementation - nothing for now
     dragging = false;
+    resizing = false;
+    selectedNote = -1;
     resizing = false;
 }
 
@@ -293,40 +310,117 @@ juce::Rectangle<float> PatternEditor::getNoteRect(int note, double startBeat, do
 
 int PatternEditor::findNoteAt(float x, float y) const
 {
-    // In a real implementation, this would find notes at the given position
-    // For now, just return -1 (no note)
+    if (!pattern)
+        return -1;
+
+    const double beatPosition = (x / zoomX) + scrollX;
+    const int noteNumber = 127 - static_cast<int>((y + scrollY) / zoomY);
+
+    const auto& notes = pattern->getNotes();
+    for (size_t i = 0; i < notes.size(); ++i) {
+        const auto& note = notes[i];
+        if (noteNumber == note.noteNumber &&
+            beatPosition >= note.startBeat &&
+            beatPosition <= note.startBeat + note.duration) {
+            return static_cast<int>(i);
+        }
+    }
+    
     return -1;
 }
 
 bool PatternEditor::isNearNoteEnd(float x, float y, int noteIndex) const
 {
-    // In a real implementation, this would check if the position is near the end of a note
-    // For now, just return false
+    if (!pattern || noteIndex < 0)
+        return false;
+
+    const auto& notes = pattern->getNotes();
+    if (noteIndex >= static_cast<int>(notes.size()))
+        return false;
+
+    const double beatPosition = (x / zoomX) + scrollX;
+    const int noteNumber = 127 - static_cast<int>((y + scrollY) / zoomY);
+
+    const auto& note = notes[noteIndex];
+    if (noteNumber == note.noteNumber) {
+        const double endBeat = note.startBeat + note.duration;
+        return std::abs(beatPosition - endBeat) * zoomX < 5.0f; // 5 pixels tolerance
+    }
+    
     return false;
 }
 
 void PatternEditor::addNoteAt(float x, float y)
 {
-    // In a real implementation, this would add a note at the given position
-    // For now, do nothing
+    if (!pattern)
+        return;
+
+    // Convert screen coordinates to musical values
+    double beatPosition = (x / zoomX) + scrollX;
+    int noteNumber = 127 - static_cast<int>((y + scrollY) / zoomY);
+
+    // Snap to grid
+    beatPosition = std::round(beatPosition / gridSize) * gridSize;
+    noteNumber = juce::jlimit(0, 127, noteNumber);
+
+    // Create new note
+    NoteEvent newNote;
+    newNote.noteNumber = noteNumber;
+    newNote.startBeat = beatPosition;
+    newNote.duration = gridSize;
+    newNote.velocity = 100;  // Default velocity
+
+    pattern->addNote(newNote);
+    updateDisplay();
 }
 
 void PatternEditor::removeNote(int index)
 {
-    // In a real implementation, this would remove a note at the given index
-    // For now, do nothing
+    if (!pattern || index < 0)
+        return;
+        
+    const auto& notes = pattern->getNotes();
+    if (index >= static_cast<int>(notes.size()))
+        return;
+        
+    pattern->removeNote(index);
+    updateDisplay();
 }
 
 void PatternEditor::moveNote(int index, double newStartBeat, int newNote)
 {
-    // In a real implementation, this would move a note to a new position
-    // For now, do nothing
+    if (!pattern || index < 0)
+        return;
+        
+    const auto& notes = pattern->getNotes();
+    if (index >= static_cast<int>(notes.size()))
+        return;
+        
+    // Ensure values are in valid ranges
+    newStartBeat = std::max(0.0, newStartBeat);
+    newNote = juce::jlimit(0, 127, newNote);
+    
+    pattern->moveNote(index, newStartBeat, newNote);
+    updateDisplay();
+    
+    if (noteSelectedCallback)
+        noteSelectedCallback(index, newStartBeat, notes[index].duration);
 }
 
 void PatternEditor::resizeNote(int index, double newDuration)
 {
-    // In a real implementation, this would resize a note
-    // For now, do nothing
+    if (!pattern || index < 0)
+        return;
+        
+    const auto& notes = pattern->getNotes();
+    if (index >= static_cast<int>(notes.size()))
+        return;
+        
+    // Ensure duration is valid
+    newDuration = std::max(gridSize, newDuration);
+    
+    pattern->resizeNote(index, newDuration);
+    updateDisplay();
 }
 
 } // namespace UndergroundBeats

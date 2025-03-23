@@ -213,7 +213,7 @@ void EnvelopePanel::paint(juce::Graphics& g)
     
     // Draw title
     g.setColour(juce::Colours::white);
-    g.setFont(juce::Font(16.0f, juce::Font::bold));
+    g.setFont(juce::Font(16.0f).withStyle(juce::Font::bold));
     g.drawText(envelopeName, getLocalBounds().reduced(10, 10), juce::Justification::topLeft, true);
 }
 
