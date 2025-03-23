@@ -150,9 +150,17 @@ void PatternGridComponent::mouseDown(const juce::MouseEvent& e)
         }
         else
         {
-            grid[gridPos.y][gridPos.x].isActive = false;
-            // Remove note from pattern at this position
-            // TODO: Implement note removal in Pattern class
+            // Convert grid position to musical values
+            int noteNumber = rows - 1 - gridPos.y;
+            double startTime = gridPos.x / 4.0;
+            
+            // Find and remove note at this position
+            int noteIndex = pattern->findNoteAt(startTime, noteNumber);
+            if (noteIndex >= 0)
+            {
+                pattern->removeNote(noteIndex);
+                grid[gridPos.y][gridPos.x].isActive = false;
+            }
         }
         
         repaint();
@@ -188,8 +196,17 @@ void PatternGridComponent::mouseDrag(const juce::MouseEvent& e)
         }
         else
         {
-            grid[gridPos.y][gridPos.x].isActive = false;
-            // TODO: Implement note removal
+            // Convert grid position to musical values
+            int noteNumber = rows - 1 - gridPos.y;
+            double startTime = gridPos.x / 4.0;
+            
+            // Find and remove note at this position
+            int noteIndex = pattern->findNoteAt(startTime, noteNumber);
+            if (noteIndex >= 0)
+            {
+                pattern->removeNote(noteIndex);
+                grid[gridPos.y][gridPos.x].isActive = false;
+            }
         }
         
         repaint();

@@ -57,19 +57,32 @@ MainComponent::MainComponent() :
         
         juce::Logger::writeToLog("MainComponent: Transport controls added.");
         
-        // Add trigger button for testing
+        // Connect transport controls to sequencer
         playButton.onClick = [this] { 
-            // Trigger oscillator and envelope
-            envelopeProcessor->noteOn();
-            filterEnvelope->noteOn();
+            sequencer->play();
+            playButton.setEnabled(false);
+            stopButton.setEnabled(true);
         };
         
         stopButton.onClick = [this] {
-            // Release envelope
-            envelopeProcessor->noteOff();
-            filterEnvelope->noteOff();
+            sequencer->stop();
+            playButton.setEnabled(true);
+            stopButton.setEnabled(false);
         };
         
+        recordButton.onClick = [this] {
+            bool isRecording = sequencer->toggleRecording();
+            recordButton.setToggleState(isRecording, juce::dontSendNotification);
+        };
+        
+        // Initialize button states
+        stopButton.setEnabled(false);
+        recordButton.setToggleState(false, juce::dontSendNotification);
+        
+        // Connect tempo slider
+        tempoSlider.onValueChange = [this] {
+            sequencer->setTempo(tempoSlider.getValue());
+        };
         
         // Set up audio format manager and initialize audio processors
         juce::Logger::writeToLog("MainComponent: Setting up audio...");
@@ -163,9 +176,30 @@ void MainComponent::createAudioProcessors()
     // Create the filter envelope
     filterEnvelope = std::make_unique<FilterEnvelope>();
     
+    // Create sequencer components
+    sequencer = std::make_unique<Sequencer>();
+    midiEngine = std::make_unique<MidiEngine>();
+    timeline = std::make_shared<Timeline>();
+    
     // Create effects
     delay = std::make_unique<Delay>();
     reverb = std::make_unique<UndergroundBeats::Reverb>();
+    
+    // Configure sequencer
+    sequencer->setTempo(120.0);
+    sequencer->setTimeSignature(4, 4);
+    
+    // Connect sequencer to MIDI engine
+    sequencer->setNoteOnCallback([this](int note, int velocity, double timeStamp) {
+        oscillatorBank->setMasterFrequency(AudioMath::midiNoteToFrequency(note));
+        envelopeProcessor->noteOn();
+        filterEnvelope->noteOn();
+    });
+    
+    sequencer->setNoteOffCallback([this](int note, double timeStamp) {
+        envelopeProcessor->noteOff();
+        filterEnvelope->noteOff();
+    });
     
     // Set up the oscillator bank
     oscillatorBank->setMasterFrequency(440.0f);
@@ -288,7 +322,11 @@ void MainComponent::prepareToPlay(int samplesPerBlockExpected, double sampleRate
         // Prepare audio buffer
         audioBuffer.setSize(2, samplesPerBlockExpected);
         
-        juce::Logger::writeToLog("MainComponent: Audio processors prepared.");
+        // Prepare sequencer components
+        sequencer->prepare(sampleRate, samplesPerBlockExpected);
+        midiEngine->prepare(sampleRate, samplesPerBlockExpected);
+        
+        juce::Logger::writeToLog("MainComponent: Audio processors and sequencer prepared.");
     }
     catch (const std::exception& e) {
         juce::Logger::writeToLog("Exception in prepareToPlay: " + juce::String(e.what()));
@@ -316,15 +354,25 @@ void MainComponent::getNextAudioBlock(const juce::AudioSourceChannelInfo& buffer
     // Process through envelope
     envelopeProcessor->process(monoBuffer, bufferToFill.numSamples);
     
+    // Update filter envelope
+    float filterEnvValue = filterEnvelope->getNextValue();
+    filter->setCutoff(filterEnvelope->getBaseCutoff() * filterEnvValue);
+    filter->setResonance(filterEnvelope->getBaseResonance() * filterEnvValue);
+    
     // Process through filter
     filter->process(monoBuffer, bufferToFill.numSamples);
     
-    // Copy mono to stereo output
-    for (int channel = 0; channel < bufferToFill.buffer->getNumChannels(); ++channel) {
-        float* channelData = bufferToFill.buffer->getWritePointer(channel, bufferToFill.startSample);
-        for (int i = 0; i < bufferToFill.numSamples; ++i) {
-            channelData[i] = monoBuffer[i];
-        }
+    // Process through effects
+    delay->process(monoBuffer, bufferToFill.numSamples);
+    reverb->process(monoBuffer, bufferToFill.numSamples);
+    
+    // Copy processed audio to both channels
+    float* leftChannel = bufferToFill.buffer->getWritePointer(0, bufferToFill.startSample);
+    float* rightChannel = bufferToFill.buffer->getWritePointer(1, bufferToFill.startSample);
+    
+    for (int i = 0; i < bufferToFill.numSamples; ++i) {
+        leftChannel[i] = monoBuffer[i] * 0.5f;  // Reduce volume to prevent clipping
+        rightChannel[i] = monoBuffer[i] * 0.5f;
     }
 }
 

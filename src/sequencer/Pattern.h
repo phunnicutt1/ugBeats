@@ -107,10 +107,42 @@ public:
     /**
      * @brief Remove a note from the pattern
      * 
-     * @param index The index of the note to remove
+     * @param index The note index to remove
      * @return true if the note was removed
      */
     bool removeNote(int index);
+
+    
+    /**
+     * @brief Remove all notes within a given time and note range
+     * 
+     * @param startTime Start time in beats
+     * @param endTime End time in beats
+     * @param lowNote Lowest note to remove
+     * @param highNote Highest note to remove
+     * @return true if any notes were removed
+     */
+    bool removeNotesInRange(double startTime, double endTime, int lowNote, int highNote);
+    
+    /**
+     * @brief Remove all notes at a specific time
+     * 
+     * @param time Time in beats
+     * @param tolerance Time tolerance in beats
+     * @return true if any notes were removed
+     */
+    bool removeNotesAtTime(double time, double tolerance = 0.001);
+    
+    /**
+     * @brief Find a note at a specific time and pitch
+     * 
+     * @param time Time in beats
+     * @param note MIDI note number
+     * @param tolerance Time tolerance in beats
+     * @return Index of the note or -1 if not found
+     */
+    int findNoteAt(double time, int note, double tolerance = 0.001) const;
+
     
     /**
      * @brief Get a note event by index
@@ -261,7 +293,26 @@ public:
      */
     bool restoreStateFromXml(const juce::XmlElement* xml);
     
+    /**
+     * @brief Add a listener to receive pattern change notifications
+     * 
+     * @param listener The listener to add
+     */
+    void addListener(juce::ActionListener* listener);
+    
+    /**
+     * @brief Remove a listener from pattern change notifications
+     * 
+     * @param listener The listener to remove
+     */
+    void removeListener(juce::ActionListener* listener);
+    
 private:
+    /**
+     * @brief Notify listeners that the pattern has changed
+     */
+    void notifyChange();
+    juce::ActionBroadcaster broadcaster;
     std::string name;
     double length; // Length in beats
     std::vector<NoteEvent> notes;

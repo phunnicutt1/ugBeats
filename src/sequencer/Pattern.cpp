@@ -58,6 +58,9 @@ int Pattern::addNote(int note, int velocity, double startTime, double duration)
     // Add the note
     notes.push_back({note, velocity, startTime, duration});
     
+    // Notify listeners of the change
+    notifyChange();
+    
     // Return the index of the added note
     return static_cast<int>(notes.size() - 1);
 }
@@ -88,6 +91,7 @@ bool Pattern::editNote(int index, int note, int velocity, double startTime, doub
     notes[index].startTime = startTime;
     notes[index].duration = duration;
     
+    notifyChange();
     return true;
 }
 
@@ -98,10 +102,88 @@ bool Pattern::removeNote(int index)
         return false;
     }
     
+    notes.erase(notes.begin() + index);
+    notifyChange();
+    return true;
+}
+
+bool Pattern::removeNotesInRange(double startTime, double endTime, int lowNote, int highNote)
+{
+    bool removed = false;
+    auto it = notes.begin();
+    
+    while (it != notes.end())
+    {
+        bool shouldRemove = it->startTime >= startTime && 
+                          it->startTime < endTime &&
+                          it->note >= lowNote &&
+                          it->note <= highNote;
+                          
+        if (shouldRemove)
+        {
+            it = notes.erase(it);
+            removed = true;
+        }
+        else
+        {
+            ++it;
+        }
+    }
+    
+    return removed;
+}
+
+bool Pattern::removeNotesAtTime(double time, double tolerance)
+{
+    bool removed = false;
+    auto it = notes.begin();
+    
+    while (it != notes.end())
+    {
+        if (std::abs(it->startTime - time) <= tolerance)
+        {
+            it = notes.erase(it);
+            removed = true;
+        }
+        else
+        {
+            ++it;
+        }
+    }
+    
+    return removed;
+}
+
+int Pattern::findNoteAt(double time, int note, double tolerance) const
+{
+    for (size_t i = 0; i < notes.size(); ++i)
+    {
+        const auto& n = notes[i];
+        if (n.note == note && std::abs(n.startTime - time) <= tolerance)
+        {
+            return static_cast<int>(i);
+        }
+    }
+    return -1;
+}
+
+void Pattern::addListener(juce::ActionListener* listener)
+{
+    broadcaster.addActionListener(listener);
+}
+
+void Pattern::removeListener(juce::ActionListener* listener)
+{
+    broadcaster.removeActionListener(listener);
+}
+
+void Pattern::notifyChange()
+{
+    broadcaster.sendActionMessage("patternChanged");
     // Remove the note
     notes.erase(notes.begin() + index);
     
-    return true;
+    return -1;
 }
 
 const NoteEvent* Pattern::getNote(int index) const
