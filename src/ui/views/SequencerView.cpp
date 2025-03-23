@@ -1,6 +1,8 @@
 #include "SequencerView.h"
 
-SequencerView::SequencerView(std::shared_ptr<UndergroundBeats::Sequencer> seq)
+namespace UndergroundBeats {
+
+SequencerView::SequencerView(std::shared_ptr<Sequencer> seq)
     : sequencer(seq)
 {
     // Initialize transport controls

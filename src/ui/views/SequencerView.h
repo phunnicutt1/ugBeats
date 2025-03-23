@@ -2,6 +2,11 @@
 
 #include <JuceHeader.h>
 #include "../../sequencer/Sequencer.h"
+#include "../../sequencer/Track.h"
+#include "../components/PatternGridComponent.h"
+#include "../components/TrackListComponent.h"
+
+namespace UndergroundBeats {
 
 class SequencerView : public juce::Component,
                      private juce::Timer
@@ -50,3 +55,5 @@ private:
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SequencerView)
 };
+
+} // namespace UndergroundBeats

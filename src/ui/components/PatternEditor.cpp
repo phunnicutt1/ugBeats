@@ -162,6 +162,7 @@ void PatternEditor::mouseDrag(const juce::MouseEvent& e)
         const int noteNumber = juce::jlimit(0, 127, 127 - static_cast<int>((mouseY + scrollY) / zoomY));
         moveNote(selectedNote, beatPosition, noteNumber);
     }
+}
 
 void PatternEditor::mouseUp(const juce::MouseEvent& e)
 {
@@ -319,9 +320,9 @@ int PatternEditor::findNoteAt(float x, float y) const
     const auto& notes = pattern->getNotes();
     for (size_t i = 0; i < notes.size(); ++i) {
         const auto& note = notes[i];
-        if (noteNumber == note.noteNumber &&
-            beatPosition >= note.startBeat &&
-            beatPosition <= note.startBeat + note.duration) {
+        if (noteNumber == note.note &&
+            beatPosition >= note.startTime &&
+            beatPosition <= note.startTime + note.duration) {
             return static_cast<int>(i);
         }
     }
@@ -342,8 +343,8 @@ bool PatternEditor::isNearNoteEnd(float x, float y, int noteIndex) const
     const int noteNumber = 127 - static_cast<int>((y + scrollY) / zoomY);
 
     const auto& note = notes[noteIndex];
-    if (noteNumber == note.noteNumber) {
-        const double endBeat = note.startBeat + note.duration;
+    if (noteNumber == note.note) {
+        const double endBeat = note.startTime + note.duration;
         return std::abs(beatPosition - endBeat) * zoomX < 5.0f; // 5 pixels tolerance
     }
     
@@ -365,8 +366,8 @@ void PatternEditor::addNoteAt(float x, float y)
 
     // Create new note
     NoteEvent newNote;
-    newNote.noteNumber = noteNumber;
-    newNote.startBeat = beatPosition;
+    newNote.note = noteNumber;
+    newNote.startTime = beatPosition;
     newNote.duration = gridSize;
     newNote.velocity = 100;  // Default velocity
 

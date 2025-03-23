@@ -279,13 +279,13 @@ void PatternGridComponent::updateGridFromPattern()
     for (int i = 0; i < pattern->getNoteCount(); ++i)
     {
         auto note = pattern->getNote(i);
-        int x = static_cast<int>(note.startTime * 4.0); // Assuming 16th note grid
-        int y = rows - 1 - (note.note % rows); // Map MIDI notes to grid rows
+        int x = static_cast<int>(note->startTime * 4.0); // Assuming 16th note grid
+        int y = rows - 1 - (note->note % rows); // Map MIDI notes to grid rows
         
         if (x >= 0 && x < columns && y >= 0 && y < rows)
         {
             grid[y][x].isActive = true;
-            grid[y][x].velocity = note.velocity;
+            grid[y][x].velocity = note->velocity;
         }
     }
 }

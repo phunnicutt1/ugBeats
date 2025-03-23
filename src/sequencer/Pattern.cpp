@@ -107,6 +107,40 @@ bool Pattern::removeNote(int index)
     return true;
 }
 
+bool Pattern::moveNote(int index, double newStartTime, int newNote)
+{
+    if (index < 0 || index >= static_cast<int>(notes.size()))
+    {
+        return false;
+    }
+    
+    // Ensure values are in valid ranges
+    newStartTime = std::max(0.0, newStartTime);
+    newNote = juce::jlimit(0, 127, newNote);
+    
+    notes[index].startTime = newStartTime;
+    notes[index].note = newNote;
+    
+    notifyChange();
+    return true;
+}
+
+bool Pattern::resizeNote(int index, double newDuration)
+{
+    if (index < 0 || index >= static_cast<int>(notes.size()))
+    {
+        return false;
+    }
+    
+    // Ensure duration is valid
+    newDuration = std::max(0.001, newDuration);  // Minimum duration of 1ms
+    
+    notes[index].duration = newDuration;
+    
+    notifyChange();
+    return true;
+}
+
 bool Pattern::removeNotesInRange(double startTime, double endTime, int lowNote, int highNote)
 {
     bool removed = false;

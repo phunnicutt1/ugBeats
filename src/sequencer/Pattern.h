@@ -112,7 +112,25 @@ public:
      */
     bool removeNote(int index);
 
-    
+    /**
+     * @brief Move a note to a new position and pitch
+     * 
+     * @param index The note index to move
+     * @param newStartTime New start time in beats
+     * @param newNote New MIDI note number
+     * @return true if successful
+     */
+    bool moveNote(int index, double newStartTime, int newNote);
+
+    /**
+     * @brief Resize a note's duration
+     * 
+     * @param index The note index to resize
+     * @param newDuration New duration in beats
+     * @return true if successful
+     */
+    bool resizeNote(int index, double newDuration);
+
     /**
      * @brief Remove all notes within a given time and note range
      * 
@@ -292,6 +310,20 @@ public:
      * @return true if state was successfully restored
      */
     bool restoreStateFromXml(const juce::XmlElement* xml);
+
+    /**
+     * @brief Get current playback position
+     * 
+     * @return Current position in beats
+     */
+    double getCurrentPosition() const { return currentPosition; }
+    
+    /**
+     * @brief Get the number of notes in the pattern
+     * 
+     * @return Number of notes
+     */
+    int getNoteCount() const { return static_cast<int>(notes.size()); }
     
     /**
      * @brief Add a listener to receive pattern change notifications

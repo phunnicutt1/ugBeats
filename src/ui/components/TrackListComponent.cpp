@@ -38,7 +38,7 @@ void TrackListComponent::paintListBoxItem(int rowNumber, juce::Graphics& g,
         
         // Draw selection background
         if (rowIsSelected)
-            g.fillAll(getLookAndFeel().findColour(juce::ListBox::highlightColourId));
+            g.fillAll(getLookAndFeel().findColour(juce::TextEditor::highlightColourId));
             
         // Draw track name
         g.setColour(getLookAndFeel().findColour(juce::ListBox::textColourId));
@@ -114,7 +114,7 @@ void TrackListComponent::createTrackControls(int index)
     // Create mute button
     controls.muteButton = std::make_unique<juce::TextButton>("M");
     controls.muteButton->setClickingTogglesState(true);
-    controls.muteButton->onClick = [this, index]() {
+    controls.muteButton->onClick = [this, index, &controls]() {
         if (auto track = getTrack(index))
         {
             track->setMuted(controls.muteButton->getToggleState());
@@ -126,7 +126,7 @@ void TrackListComponent::createTrackControls(int index)
     // Create solo button
     controls.soloButton = std::make_unique<juce::TextButton>("S");
     controls.soloButton->setClickingTogglesState(true);
-    controls.soloButton->onClick = [this, index]() {
+    controls.soloButton->onClick = [this, index, &controls]() {
         if (auto track = getTrack(index))
         {
             track->setSolo(controls.soloButton->getToggleState());
@@ -136,19 +136,21 @@ void TrackListComponent::createTrackControls(int index)
     };
     
     // Create volume slider
-    controls.volumeSlider = std::make_unique<juce::Slider>(juce::Slider::LinearVertical);
+    controls.volumeSlider = std::make_unique<juce::Slider>();
+    controls.volumeSlider->setSliderStyle(juce::Slider::LinearVertical);
     controls.volumeSlider->setRange(0.0, 1.0);
     controls.volumeSlider->setValue(1.0);
-    controls.volumeSlider->onValueChange = [this, index]() {
+    controls.volumeSlider->onValueChange = [this, index, &controls]() {
         if (auto track = getTrack(index))
             track->setVolume(static_cast<float>(controls.volumeSlider->getValue()));
     };
     
     // Create pan slider
-    controls.panSlider = std::make_unique<juce::Slider>(juce::Slider::LinearHorizontal);
+    controls.panSlider = std::make_unique<juce::Slider>();
+    controls.panSlider->setSliderStyle(juce::Slider::LinearHorizontal);
     controls.panSlider->setRange(-1.0, 1.0);
     controls.panSlider->setValue(0.0);
-    controls.panSlider->onValueChange = [this, index]() {
+    controls.panSlider->onValueChange = [this, index, &controls]() {
         if (auto track = getTrack(index))
             track->setPan(static_cast<float>(controls.panSlider->getValue()));
     };
@@ -164,7 +166,11 @@ void TrackListComponent::createTrackControls(int index)
 void TrackListComponent::updateTrackControls()
 {
     auto rowHeight = listBox.getRowHeight();
-    auto viewportPosition = listBox.getViewPosition();
+    auto viewport = listBox.getViewport();
+    if (!viewport)
+        return;
+        
+    auto viewportPosition = viewport->getViewPosition();
     
     for (int i = 0; i < static_cast<int>(trackControls.size()); ++i)
     {
