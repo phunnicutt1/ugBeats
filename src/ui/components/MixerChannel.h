@@ -244,8 +244,6 @@ private:
     
     // Update the layout based on the number of sends
     void updateLayout();
-    
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MixerChannel)
 };
 
 } // namespace UndergroundBeats
