@@ -103,6 +103,51 @@ public:
      * @return The current wet/dry mix
      */
     float getMix() const;
+    
+    /**
+     * @brief Process a mono buffer of samples
+     * 
+     * @param buffer Buffer containing samples to process
+     * @param numSamples Number of samples to process
+     */
+    void process(float* buffer, int numSamples);
+    
+    /**
+     * @brief Process a stereo buffer of samples
+     * 
+     * @param leftBuffer Left channel buffer
+     * @param rightBuffer Right channel buffer
+     * @param numSamples Number of samples to process
+     */
+    void processStereo(float* leftBuffer, float* rightBuffer, int numSamples);
+    
+    /**
+     * @brief Prepare the effect for processing
+     * 
+     * @param sampleRate The sample rate in Hz
+     * @param blockSize The maximum block size in samples
+     */
+    virtual void prepare(double sampleRate, int blockSize);
+    
+    /**
+     * @brief Reset the effect state
+     */
+    virtual void reset();
+    
+    /**
+     * @brief Create an XML element containing the effect's state
+     * 
+     * @return XML element containing effect state
+     */
+    virtual std::unique_ptr<juce::XmlElement> createStateXml() const;
+    
+    /**
+     * @brief Restore effect state from an XML element
+     * 
+     * @param xml XML element containing effect state
+     * @return true if state was successfully restored
+     */
+    virtual bool restoreStateFromXml(const juce::XmlElement* xml);
 
 protected:
     /**
@@ -199,28 +244,6 @@ protected:
      * @param sampleRate The sample rate in Hz
      * @param blockSize The maximum block size in samples
      */
-    virtual void prepare(double sampleRate, int blockSize);
-    
-    /**
-     * @brief Reset the effect state
-     */
-    virtual void reset();
-    
-    /**
-     * @brief Create an XML element containing the effect's state
-     * 
-     * @return XML element containing effect state
-     */
-    virtual std::unique_ptr<juce::XmlElement> createStateXml() const;
-    
-    /**
-     * @brief Restore effect state from an XML element
-     * 
-     * @param xml XML element containing effect state
-     * @return true if state was successfully restored
-     */
-    virtual bool restoreStateFromXml(const juce::XmlElement* xml);
-    
 protected:
     /**
      * @brief Process a single sample (mono)
