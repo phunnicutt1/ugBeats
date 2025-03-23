@@ -77,7 +77,7 @@ public:
     
 private:
     Engine* audioEngine;
-    std::shared_ptr<ProcessorGraph> processorGraph;
+    ProcessorGraph* processorGraph;  // Non-owning pointer - owned by Engine
     
     // Scrollable view for channels
     juce::Viewport channelsViewport;

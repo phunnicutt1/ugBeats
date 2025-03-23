@@ -274,8 +274,7 @@ void MixerChannel::createControls()
     // Channel name label
     nameLabel.setText(channelName, juce::dontSendNotification);
     nameLabel.setJustificationType(juce::Justification::centred);
-    juce::Font boldFont(14.0f);
-    boldFont = boldFont.withStyle(juce::Font::bold);
+    juce::Font boldFont = juce::Font(juce::FontStyle().withHeight(14.0f).withStyle(juce::Font::bold));
     nameLabel.setFont(boldFont);
     
     // Add components

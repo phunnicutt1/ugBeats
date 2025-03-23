@@ -130,8 +130,8 @@ bool ParameterAutomation::loadFromXml(const juce::XmlElement* xml) {
     
     for (auto* pointXml : xml->getChildWithTagNameIterator("Point")) {
         double time = pointXml->getDoubleAttribute("time");
-        float value = pointXml->getFloatAttribute("value");
-        auto curveType = static_cast<juce::CurveType>(pointXml->getIntAttribute("curve"));
+        float value = static_cast<float>(pointXml->getDoubleAttribute("value", 0.0));
+        auto curveType = static_cast<CurveType>(pointXml->getIntAttribute("curveType", 0));
         addPoint(time, value, curveType);
     }
     

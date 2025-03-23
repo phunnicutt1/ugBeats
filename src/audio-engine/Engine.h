@@ -59,7 +59,9 @@ private:
     AudioDeviceSettings deviceSettings;
     
     // Audio processor graph
+    // Shared access to processor graph
     std::unique_ptr<UndergroundBeats::ProcessorGraph> processorGraph;
+    friend class MixerView; // Allow MixerView direct access to processor graph
     
     // Thread-safe parameter updates (simple version for now)
     std::mutex parameterMutex;
