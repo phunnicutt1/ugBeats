@@ -74,7 +74,7 @@ SequencerView::SequencerView(std::shared_ptr<Sequencer> seq)
     };
     
     addAndMakeVisible(deletePatternButton);
-    deletePatternButton.onClick = [this]() {
+    deletePatternButton.onClick = []() {
         // TODO: Delete current pattern through sequencer
     };
     
@@ -255,3 +255,6 @@ void SequencerView::resized()
     // Pattern grid takes remaining space
     patternGrid->setBounds(area);
 }
+
+
+} // namespace UndergroundBeats
