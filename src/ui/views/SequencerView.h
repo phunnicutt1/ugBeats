@@ -12,6 +12,7 @@ class SequencerView : public juce::Component,
                      private juce::Timer
 {
 public:
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SequencerView)
     SequencerView(std::shared_ptr<UndergroundBeats::Sequencer> sequencer);
     ~SequencerView() override;
 

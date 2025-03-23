@@ -114,7 +114,7 @@ SequencerView::SequencerView(std::shared_ptr<Sequencer> seq)
             } else {
                 // Create a default pattern for new tracks
                 auto pattern = std::make_shared<UndergroundBeats::Pattern>(
-                    "Pattern 1", 4.0); // 4 beats default length
+                    std::string("Pattern 1"), 4.0); // 4 beats default length
                 track->addPattern(pattern);
                 updatePatternList();
                 patternSelector.setSelectedItemIndex(0, juce::sendNotification);
@@ -128,7 +128,7 @@ SequencerView::SequencerView(std::shared_ptr<Sequencer> seq)
         if (selectedTrack >= 0) {
             if (auto track = trackList->getTrack(selectedTrack)) {
                 auto pattern = std::make_shared<UndergroundBeats::Pattern>(
-                    "Pattern " + juce::String(track->getPatternCount() + 1));
+                    ("Pattern " + juce::String(track->getPatternCount() + 1)).toStdString());
                 track->addPattern(pattern);
                 updatePatternList();
                 patternSelector.setSelectedItemIndex(track->getPatternCount() - 1, juce::sendNotification);

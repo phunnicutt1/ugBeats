@@ -23,6 +23,7 @@ class MixerChannel : public juce::Component,
                      public juce::Slider::Listener,
                      public juce::Button::Listener {
 public:
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MixerChannel)
     MixerChannel(const juce::String& name = "Channel");
     ~MixerChannel() override;
     
