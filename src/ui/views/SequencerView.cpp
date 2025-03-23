@@ -90,8 +90,8 @@ SequencerView::SequencerView(std::shared_ptr<Sequencer> seq)
     
     addAndMakeVisible(addTrackButton);
     addTrackButton.onClick = [this]() {
-        auto track = std::make_shared<UndergroundBeats::Track>("Track " + 
-            juce::String(trackList->getTrackCount() + 1));
+        auto track = std::make_shared<UndergroundBeats::Track>(
+            ("Track " + juce::String(trackList->getTrackCount() + 1)).toStdString());
         trackList->addTrack(track);
         // TODO: Add track to sequencer engine
     };
