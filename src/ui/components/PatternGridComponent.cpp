@@ -55,12 +55,14 @@ void PatternGridComponent::drawGrid(juce::Graphics& g)
 
 void PatternGridComponent::drawNotes(juce::Graphics& g)
 {
+    if (!pattern)
+        return;
+
     auto bounds = getLocalBounds();
     float cellWidth = bounds.getWidth() / static_cast<float>(columns);
     float cellHeight = bounds.getHeight() / static_cast<float>(rows);
     
-    g.setColour(juce::Colours::orange);
-    
+    // Draw all notes
     for (int y = 0; y < rows; ++y)
     {
         for (int x = 0; x < columns; ++x)
@@ -76,10 +78,51 @@ void PatternGridComponent::drawNotes(juce::Graphics& g)
             }
         }
     }
+    
+    // Highlight active notes
+    auto activeNotes = pattern->getActiveNotes();
+    for (const auto& note : activeNotes)
+    {
+        int x = static_cast<int>(note.startTime * 4.0); // Assuming 16th note grid
+        int y = rows - 1 - (note.note % rows); // Map MIDI notes to grid rows
+        
+        if (x >= 0 && x < columns && y >= 0 && y < rows)
+        {
+            float xPos = x * cellWidth;
+            float yPos = y * cellHeight;
+            
+            // Draw highlight
+            g.setColour(juce::Colours::yellow.withAlpha(0.5f));
+            g.fillRect(xPos + 1, yPos + 1, cellWidth - 2, cellHeight - 2);
+            
+            // Draw border
+            g.setColour(juce::Colours::yellow);
+            g.drawRect(xPos + 1, yPos + 1, cellWidth - 2, cellHeight - 2, 2.0f);
+        }
+    }
+    
+    // Draw playback position line
+    if (pattern)
+    {
+        double position = pattern->getCurrentPosition();
+        int positionColumn = static_cast<int>(position * 4.0); // Convert beats to grid columns
+        
+        if (positionColumn >= 0 && positionColumn < columns)
+        {
+            float xPos = positionColumn * cellWidth;
+            
+            // Draw vertical playback line
+            g.setColour(juce::Colours::white);
+            g.drawLine(xPos, 0, xPos, static_cast<float>(bounds.getHeight()), 2.0f);
+        }
+    }
 }
 
 void PatternGridComponent::mouseDown(const juce::MouseEvent& e)
 {
+    if (!pattern)
+        return;
+
     isEditing = true;
     drawMode = !e.mods.isRightButtonDown(); // Left click = draw, Right click = erase
     
@@ -87,21 +130,68 @@ void PatternGridComponent::mouseDown(const juce::MouseEvent& e)
     if (gridPos.x >= 0 && gridPos.y >= 0)
     {
         lastGridPosition = gridPos;
-        grid[gridPos.y][gridPos.x].isActive = drawMode;
+        
+        if (drawMode)
+        {
+            // Calculate velocity based on vertical position within cell
+            auto bounds = getLocalBounds();
+            float cellHeight = bounds.getHeight() / static_cast<float>(rows);
+            float cellY = gridPos.y * cellHeight;
+            float relativeY = e.position.y - cellY;
+            int velocity = juce::jlimit(1, 127, static_cast<int>((1.0f - (relativeY / cellHeight)) * 127.0f));
+            
+            grid[gridPos.y][gridPos.x].isActive = true;
+            grid[gridPos.y][gridPos.x].velocity = velocity;
+            
+            // Add note to pattern
+            int noteNumber = rows - 1 - gridPos.y;
+            double startTime = gridPos.x / 4.0; // Convert grid position to beats
+            pattern->addNote(noteNumber, velocity, startTime, 0.25); // Quarter beat duration
+        }
+        else
+        {
+            grid[gridPos.y][gridPos.x].isActive = false;
+            // Remove note from pattern at this position
+            // TODO: Implement note removal in Pattern class
+        }
+        
         repaint();
     }
 }
 
 void PatternGridComponent::mouseDrag(const juce::MouseEvent& e)
 {
-    if (!isEditing)
+    if (!isEditing || !pattern)
         return;
         
     auto gridPos = pointToGridPosition(e.position.toInt());
     if (gridPos.x >= 0 && gridPos.y >= 0 && gridPos != lastGridPosition)
     {
         lastGridPosition = gridPos;
-        grid[gridPos.y][gridPos.x].isActive = drawMode;
+        
+        if (drawMode)
+        {
+            // Calculate velocity as in mouseDown
+            auto bounds = getLocalBounds();
+            float cellHeight = bounds.getHeight() / static_cast<float>(rows);
+            float cellY = gridPos.y * cellHeight;
+            float relativeY = e.position.y - cellY;
+            int velocity = juce::jlimit(1, 127, static_cast<int>((1.0f - (relativeY / cellHeight)) * 127.0f));
+            
+            grid[gridPos.y][gridPos.x].isActive = true;
+            grid[gridPos.y][gridPos.x].velocity = velocity;
+            
+            // Add note to pattern
+            int noteNumber = rows - 1 - gridPos.y;
+            double startTime = gridPos.x / 4.0;
+            pattern->addNote(noteNumber, velocity, startTime, 0.25);
+        }
+        else
+        {
+            grid[gridPos.y][gridPos.x].isActive = false;
+            // TODO: Implement note removal
+        }
+        
         repaint();
     }
 }
@@ -116,25 +206,27 @@ void PatternGridComponent::setPattern(std::shared_ptr<UndergroundBeats::Pattern>
 {
     pattern = newPattern;
     
-    // Clear existing grid
-    for (auto& row : grid)
-        std::fill(row.begin(), row.end(), GridCell());
-        
     if (pattern)
     {
-        // Convert pattern notes to grid cells
-        for (int i = 0; i < pattern->getNoteCount(); ++i)
+        // Update grid dimensions if needed based on pattern length
+        int newColumns = static_cast<int>(pattern->getLength() * 4.0); // 4 grid columns per beat
+        if (newColumns != columns)
         {
-            auto note = pattern->getNote(i);
-            int x = static_cast<int>(note.startTime * 4.0); // Assuming 16th note grid
-            int y = rows - 1 - (note.note % rows); // Map MIDI notes to grid rows
-            
-            if (x >= 0 && x < columns && y >= 0 && y < rows)
-            {
-                grid[y][x].isActive = true;
-                grid[y][x].velocity = note.velocity;
-            }
+            columns = newColumns;
+            grid.resize(rows, std::vector<GridCell>(columns));
         }
+        
+        // Initialize tracking variables
+        lastNoteCount = pattern->getNoteCount();
+        
+        // Update grid contents
+        updateGridFromPattern();
+    }
+    else
+    {
+        // Clear grid if no pattern
+        for (auto& row : grid)
+            std::fill(row.begin(), row.end(), GridCell());
     }
     
     repaint();
@@ -144,56 +236,64 @@ void PatternGridComponent::timerCallback()
 {
     if (pattern)
     {
-        // Update grid cells from pattern notes if needed
-        bool needsUpdate = false;
+        // Always repaint if we have a pattern, to update playback position line
+        // and active note highlighting
+        repaint();
         
         // Check if notes have changed
         if (pattern->getNoteCount() != lastNoteCount)
         {
-            needsUpdate = true;
-        }
-        else
-        {
-            // Check if playback position has changed
-            double currentPosition = pattern->getCurrentPosition();
-            if (std::abs(currentPosition - lastPlaybackPosition) > 0.001)
-            {
-                lastPlaybackPosition = currentPosition;
-                needsUpdate = true;
-            }
-        }
-        
-        if (needsUpdate)
-        {
-            // Clear grid
-            for (auto& row : grid)
-                std::fill(row.begin(), row.end(), GridCell());
-            
-            // Update from pattern
-            for (int i = 0; i < pattern->getNoteCount(); ++i)
-            {
-                auto note = pattern->getNote(i);
-                int x = static_cast<int>(note.startTime * 4.0); // Assuming 16th note grid
-                int y = rows - 1 - (note.note % rows); // Map MIDI notes to grid rows
-                
-                if (x >= 0 && x < columns && y >= 0 && y < rows)
-                {
-                    grid[y][x].isActive = true;
-                    grid[y][x].velocity = note.velocity;
-                }
-            }
-            
+            updateGridFromPattern();
             lastNoteCount = pattern->getNoteCount();
-            repaint();
+        }
+    }
+}
+
+void PatternGridComponent::updateGridFromPattern()
+{
+    if (!pattern)
+        return;
+        
+    // Clear grid
+    for (auto& row : grid)
+        std::fill(row.begin(), row.end(), GridCell());
+    
+    // Update from pattern
+    for (int i = 0; i < pattern->getNoteCount(); ++i)
+    {
+        auto note = pattern->getNote(i);
+        int x = static_cast<int>(note.startTime * 4.0); // Assuming 16th note grid
+        int y = rows - 1 - (note.note % rows); // Map MIDI notes to grid rows
+        
+        if (x >= 0 && x < columns && y >= 0 && y < rows)
+        {
+            grid[y][x].isActive = true;
+            grid[y][x].velocity = note.velocity;
         }
     }
 }
 
 void PatternGridComponent::setGridSize(int numRows, int numColumns)
 {
-    rows = numRows;
-    columns = numColumns;
-    grid.resize(rows, std::vector<GridCell>(columns));
+    // Validate inputs
+    rows = std::max(1, numRows);
+    columns = std::max(1, numColumns);
+    
+    // Resize grid
+    grid.resize(rows);
+    for (auto& row : grid)
+    {
+        row.resize(columns);
+    }
+    
+    // If we have a pattern, update its length to match grid
+    if (pattern)
+    {
+        double newLength = columns / 4.0; // 4 grid columns per beat
+        pattern->setLength(newLength);
+        updateGridFromPattern();
+    }
+    
     repaint();
 }
 

@@ -344,6 +344,37 @@ void Pattern::clearAutomation()
     automation.clear();
 }
 
+void Pattern::updatePlaybackPosition(double transportPosition)
+{
+    // Update current position based on pattern length
+    currentPosition = std::fmod(transportPosition, length);
+}
+
+bool Pattern::isNoteActive(const NoteEvent& note, double position) const
+{
+    // Check if the note spans the current position
+    double noteEnd = note.startTime + note.duration;
+    
+    // Handle note spanning pattern boundary
+    if (noteEnd > length) {
+        noteEnd = std::fmod(noteEnd, length);
+        return (position >= note.startTime || position < noteEnd);
+    }
+    
+    return (position >= note.startTime && position < noteEnd);
+}
+
+std::vector<NoteEvent> Pattern::getActiveNotes() const
+{
+    std::vector<NoteEvent> activeNotes;
+    for (const auto& note : notes) {
+        if (isNoteActive(note, currentPosition)) {
+            activeNotes.push_back(note);
+        }
+    }
+    return activeNotes;
+}
+
 std::unique_ptr<juce::XmlElement> Pattern::createStateXml() const
 {
     auto xml = std::make_unique<juce::XmlElement>("Pattern");

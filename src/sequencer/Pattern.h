@@ -222,6 +222,29 @@ public:
      * @brief Clear automation only
      */
     void clearAutomation();
+
+    /**
+     * @brief Update the current playback position
+     * 
+     * @param transportPosition Position from transport in beats
+     */
+    void updatePlaybackPosition(double transportPosition);
+
+    /**
+     * @brief Check if a note is active at a given position
+     * 
+     * @param note The note event to check
+     * @param position Position in beats
+     * @return true if the note is active at the position
+     */
+    bool isNoteActive(const NoteEvent& note, double position) const;
+
+    /**
+     * @brief Get all currently active notes
+     * 
+     * @return Vector of active note events
+     */
+    std::vector<NoteEvent> getActiveNotes() const;
     
     /**
      * @brief Create an XML element containing the pattern's state

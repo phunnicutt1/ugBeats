@@ -26,6 +26,7 @@ private:
     void drawGrid(juce::Graphics& g);
     void drawNotes(juce::Graphics& g);
     juce::Point<int> pointToGridPosition(juce::Point<int> point) const;
+    void updateGridFromPattern();
     
     std::shared_ptr<UndergroundBeats::Pattern> pattern;
     
