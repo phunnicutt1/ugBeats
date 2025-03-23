@@ -138,7 +138,8 @@ int EffectsChain::registerNode(RoutingNode* node) {
 
 void EffectsChain::reset() {
     // Reset all nodes in the chain
-    std::function<void(RoutingNode*)> resetNode = [](RoutingNode* node) {
+    std::function<void(RoutingNode*)> resetNode;
+    resetNode = [&resetNode](RoutingNode* node) {
         if (node->getType() == RoutingNode::Type::Effect) {
             if (auto* effect = node->getEffect()) {
                 effect->reset();
@@ -208,7 +209,7 @@ std::unique_ptr<RoutingNode> EffectsChain::restoreNodeFromXml(const juce::XmlEle
     } else {
         // Restore group node
         auto node = std::make_unique<RoutingNode>(type);
-        node->setMixLevel(xml->getFloatAttribute("mixLevel", 1.0f));
+        node->setMixLevel(static_cast<float>(xml->getDoubleAttribute("mixLevel", 1.0)));
         
         // Restore children
         for (auto* childXml = xml->getFirstChildElement(); childXml != nullptr; 
@@ -235,82 +236,21 @@ bool EffectsChain::restoreStateFromXml(const juce::XmlElement* xml) {
         return false;
     }
     
-    // Clear the current effects chain
-    effects.clear();
+    // Clear current state
+    nodeMap.clear();
+    nextNodeId = 1;
     
-    // Get the number of effects to restore
-    int numEffects = xml->getNumChildElements();
-    
-    // Resize the effects vector
-    effects.reserve(numEffects);
-    
-    // Temporary vector to hold effects before sorting
-    std::vector<std::pair<int, std::unique_ptr<Effect>>> tempEffects;
-    tempEffects.reserve(numEffects);
-    
-    // Restore each effect
-    for (int i = 0; i < numEffects; ++i)
-    {
-        auto effectXml = xml->getChildElement(i);
-        
-        if (effectXml == nullptr)
-        {
-            continue;
+    // Create new root node from first child
+    if (auto* rootXml = xml->getFirstChildElement()) {
+        rootNode = restoreNodeFromXml(rootXml);
+        if (!rootNode) {
+            return false;
         }
-        
-        // Get the effect index
-        int index = effectXml->getIntAttribute("index", -1);
-        
-        if (index < 0)
-        {
-            continue;
-        }
-        
-        // Create a new effect based on the type
-        std::unique_ptr<Effect> effect;
-        
-        if (effectXml->getTagName() == "Effect")
-        {
-            // Get the effect name
-            juce::String name = effectXml->getStringAttribute("name", "");
-            
-            if (name == "Delay")
-            {
-                auto delayEffect = std::make_unique<Delay>();
-                effect = std::unique_ptr<Effect>(delayEffect.release());
-            }
-            else if (name == "Reverb")
-            {
-                auto reverbEffect = std::make_unique<Reverb>();
-                effect = std::unique_ptr<Effect>(reverbEffect.release());
-            }
-            // Add other effect types here
-        }
-        
-        if (effect != nullptr)
-        {
-            // Restore the effect state
-            effect->restoreStateFromXml(effectXml);
-            
-            // Prepare the effect
-            effect->prepare(currentSampleRate, currentBlockSize);
-            
-            // Add to temporary vector with index
-            tempEffects.emplace_back(index, std::move(effect));
-        }
+        registerNode(rootNode.get());
+        return true;
     }
     
-    // Sort effects by index
-    std::sort(tempEffects.begin(), tempEffects.end(),
-              [](const auto& a, const auto& b) { return a.first < b.first; });
-    
-    // Add sorted effects to the chain
-    for (auto& [index, effect] : tempEffects)
-    {
-        effects.push_back(std::move(effect));
-    }
-    
-    return true;
+    return false;
 }
 
 } // namespace UndergroundBeats

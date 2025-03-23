@@ -143,7 +143,7 @@ public:
      * @param curveType The curve type for interpolation
      * @return Index of the added automation point
      */
-    int addAutomationPoint(const std::string& paramId, double time, float value, int curveType = 0);
+    int addAutomationPoint(const std::string& paramId, double time, float value, CurveType curveType = CurveType::Linear);
     
     /**
      * @brief Edit an automation point
@@ -153,9 +153,9 @@ public:
      * @param time The new time
      * @param value The new value
      * @param curveType The new curve type
-     * @return true if the point was edited
+     * @return true if successful
      */
-    bool editAutomationPoint(const std::string& paramId, int index, double time, float value, int curveType = 0);
+    bool editAutomationPoint(const std::string& paramId, int index, double time, float value, CurveType curveType = CurveType::Linear);
     
     /**
      * @brief Remove an automation point

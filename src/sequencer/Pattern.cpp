@@ -124,7 +124,7 @@ const std::vector<NoteEvent>& Pattern::getNotes() const
     return notes;
 }
 
-int Pattern::addAutomationPoint(const std::string& paramId, double time, float value, int curveType)
+int Pattern::addAutomationPoint(const std::string& paramId, double time, float value, CurveType curveType)
 {
     // Clamp value to 0-1 range
     value = juce::jlimit(0.0f, 1.0f, value);
@@ -151,7 +151,7 @@ int Pattern::addAutomationPoint(const std::string& paramId, double time, float v
     return static_cast<int>(std::distance(points.begin(), it));
 }
 
-bool Pattern::editAutomationPoint(const std::string& paramId, int index, double time, float value, int curveType)
+bool Pattern::editAutomationPoint(const std::string& paramId, int index, double time, float value, CurveType curveType)
 {
     auto it = automation.find(paramId);
     if (it == automation.end())
@@ -290,20 +290,20 @@ float Pattern::getParameterValueAtTime(const std::string& paramId, double time, 
     // (Basic implementation - could be extended with more curve types)
     switch (prevPoint->curveType)
     {
-        case 1: // Exponential
+        case CurveType::Exponential:
             result = prevPoint->value + (nextPoint->value - prevPoint->value) * static_cast<float>(timeFraction * timeFraction);
             break;
-        case 2: // Logarithmic
+        case CurveType::Logarithmic:
             result = prevPoint->value + (nextPoint->value - prevPoint->value) * static_cast<float>(std::sqrt(timeFraction));
             break;
-        case 3: // S-curve
-        {
-            float s = static_cast<float>(timeFraction);
-            s = s * s * (3.0f - 2.0f * s); // Smooth step
-            result = prevPoint->value + (nextPoint->value - prevPoint->value) * s;
+        case CurveType::SCurve:
+            {
+                double x = (timeFraction - 0.5) * 2.0; // Scale to -1 to 1
+                double s = (1.0 / (1.0 + std::exp(-6.0 * x)) - 0.5) * 2.0; // Sigmoid curve
+                result = prevPoint->value + (nextPoint->value - prevPoint->value) * static_cast<float>(s);
+            }
             break;
-        }
-        default: // Linear (0)
+        case CurveType::Linear:
             // Already calculated above
             break;
     }
@@ -373,7 +373,7 @@ std::unique_ptr<juce::XmlElement> Pattern::createStateXml() const
             auto pointXml = paramXml->createNewChildElement("Point");
             pointXml->setAttribute("time", point.time);
             pointXml->setAttribute("value", point.value);
-            pointXml->setAttribute("curveType", point.curveType);
+            pointXml->setAttribute("curveType", static_cast<int>(point.curveType));
         }
     }
     
